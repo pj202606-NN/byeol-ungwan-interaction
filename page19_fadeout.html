@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>28수 - #19 퇴장</title>
+<link rel="stylesheet" href="css/wireframe.css">
+<link rel="stylesheet" href="css/oracle.css">
+</head>
+<body>
+  <script src="js/fit-screen.js"></script>
+  <script src="js/nav.js"></script>
+  <div class="screen bg-fade">
+    <div class="page-index">#19 page19_fadeout → #1 (page1_door)</div>
+  </div>
+
+  <script>
+    // 임시 구현: 안내자가 사라지고 문이 닫히는 스크린 연출이 끝나는 신호로 대체될 자리
+    // 다시 첫 화면(#1 문)으로 복귀. from=end 표시로 #1은 검은 화면에서 천천히 밝아진다
+    setTimeout(() => {
+      goTo('page1_door.html?from=end', 1200);
+    }, 1800);
+  </script>
+</body>
+</html>

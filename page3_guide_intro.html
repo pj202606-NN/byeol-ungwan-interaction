@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>28수 - #3 안내자 등장</title>
+<link rel="stylesheet" href="css/wireframe.css">
+<link rel="stylesheet" href="css/oracle.css">
+</head>
+<body>
+  <script src="js/fit-screen.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/ambient.js"></script>
+  <script src="js/subtitles.js"></script>
+  <div class="screen bg-fade" id="screen">
+    <div class="milky-band"></div>
+    <div class="guide-subtitle" id="subtitle"></div>
+    <div class="page-index">#3 page3_guide_intro</div>
+  </div>
+
+  <script>
+    // 대사 타이밍 (단위: ms) - 실제 스크린 음성/영상이 나오면 hold 값만 맞추면 된다.
+    // hold: 자막이 완전히 보이는 시간 (느긋한 말하기 속도, 약 초당 4음절 + 여운)
+    // gap: 자막이 사라진 뒤 다음 대사까지 쉬는 시간
+    const START_DELAY = 1500;
+    const END_DELAY = 2000;
+    const LINES = [
+      { text: '이곳은 별의 이야기가 흐르는 공간입니다.', hold: 4000, gap: 900 },
+      { text: '과거에는 이 땅의 옛사람들이 하늘을 올려다보며 별의 이야기를 듣고,<br>그 이야기를 따라 삶을 살아가던 때가 있었지요.', hold: 9300, gap: 1200 },
+      { text: '지금의 하늘에서는 좀처럼 선명한 별이 보이지 않지만,<br>이곳에는 당신의 별을 볼 수 있는 곳이 있습니다.', hold: 8000, gap: 1000 },
+      { text: '흐르는 연기를 따라가 보세요.', hold: 3500, gap: 900 },
+      { text: '당신의 별의 이야기를 들려줄<br>신비로운 장소가 당신을 기다리고 있을 겁니다.', hold: 5800, gap: 0 },
+    ];
+
+    const subtitle = document.getElementById('subtitle');
+
+    async function playLines() {
+      await subtitleWait(START_DELAY);
+      await playSubtitles(subtitle, LINES);
+      await subtitleWait(END_DELAY);
+      goTo('page4_smoke_gate.html', 900);
+    }
+
+    // 배경 연기 / 파티클 생성
+    const screenEl = document.getElementById('screen');
+    spawnSmoke(screenEl, 6, subtitle);
+    spawnHaze(screenEl, 34, subtitle);
+
+    const schedule = subtitleSchedule(LINES, START_DELAY);
+    showScreenNotes([
+      { at: 0, text: '도착한 우주 공간. 대사를 말하는 신비로운 은하수가 음파처럼 일렁임 (대사 동안 반복)' },
+      ...lineNotes(LINES, schedule, '은하수의 대사'),
+      { at: schedule.end, text: '대사 끝, 잠시 뜸' },
+      { at: schedule.end + END_DELAY, text: '태블릿 #4로 전환' },
+    ], { total: schedule.end + END_DELAY + 900 });
+
+    playLines();
+  </script>
+</body>
+</html>

@@ -1,0 +1,274 @@
+@font-face {
+  font-family: 'KoPub Batang Medium';
+  src: url('../fonts/KoPubWorld%20Batang%20Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+}
+
+/*
+  Pretendard 로컬 파일 자리. public/fonts에 아래 파일명으로 넣으면 바로 적용됨
+  (jsDelivr 배포판 기준 파일명 - 실제 파일명이 다르면 이 세 src 경로만 바꾸면 됨).
+  파일이 아직 없어도 로드만 실패할 뿐 자동으로 맑은 고딕으로 대체된다.
+*/
+@font-face {
+  font-family: 'Pretendard';
+  font-weight: 400;
+  font-style: normal;
+  src: url('../fonts/Pretendard-Regular.woff2') format('woff2'),
+       url('../fonts/Pretendard-Regular.otf') format('opentype');
+}
+@font-face {
+  font-family: 'Pretendard';
+  font-weight: 500;
+  font-style: normal;
+  src: url('../fonts/Pretendard-Medium.woff2') format('woff2'),
+       url('../fonts/Pretendard-Medium.otf') format('opentype');
+}
+@font-face {
+  font-family: 'Pretendard';
+  font-weight: 700;
+  font-style: normal;
+  src: url('../fonts/Pretendard-Bold.woff2') format('woff2'),
+       url('../fonts/Pretendard-Bold.otf') format('opentype');
+}
+
+:root {
+  --screen-width: 1920px;
+  --screen-height: 1080px;
+  --scale: 1;
+  --color-bg: #0a0a0a;
+  --color-box: #2a2a2a;
+  --color-fg: #d6d6d6;
+  --color-muted: #8a8a8a;
+  --color-border: #4a4a4a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+  font-family: "Pretendard", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+}
+
+/* 페이지 진입/이탈 시 전체 화면 크로스페이드 (js/nav.js의 goTo()와 짝) */
+@keyframes pageFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes pageFadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+body {
+  opacity: 0;
+  animation: pageFadeIn 0.7s cubic-bezier(.22,.61,.36,1) forwards;
+}
+body.page-fade-out {
+  animation: pageFadeOut 0.48s cubic-bezier(.22,.61,.36,1) forwards;
+}
+
+/*
+  .screen은 항상 --screen-width x --screen-height 고정 크기로 그려지고,
+  js/fit-screen.js가 뷰포트에 맞는 --scale 값을 계산해 넣어준다.
+  비율은 유지한 채 축소/확대만 되므로 어떤 모니터에서도 잘리거나
+  찌그러지지 않는다.
+*/
+.screen {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--screen-width);
+  height: var(--screen-height);
+  transform: translate(-50%, -50%) scale(var(--scale));
+  transform-origin: center center;
+  overflow: hidden;
+  background: var(--color-bg);
+  color: var(--color-fg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.page-index {
+  position: absolute;
+  bottom: 16px;
+  right: 24px;
+  font-size: 16px;
+  color: var(--color-muted);
+  letter-spacing: 1px;
+  z-index: 999;
+}
+
+.title {
+  font-size: 38px;
+  font-weight: 500;
+  margin: 0 0 24px;
+  line-height: 1.4;
+  color: var(--color-fg);
+}
+
+.subtitle {
+  font-size: 22px;
+  font-weight: 400;
+  color: var(--color-muted);
+  margin: 0 0 40px;
+  line-height: 1.7;
+}
+
+.btn {
+  min-height: 60px;
+  min-width: 200px;
+  padding: 0 40px;
+  font-size: 19px;
+  font-weight: 400;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-muted);
+  border-radius: 6px;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+}
+
+.btn:active {
+  background: var(--color-fg);
+  color: #000;
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.placeholder {
+  background: var(--color-box);
+  border: 1px dashed var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-muted);
+  font-size: 18px;
+  text-align: center;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+.pulse {
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.spinner {
+  width: 80px;
+  height: 80px;
+  border: 6px solid var(--color-box);
+  border-top-color: var(--color-fg);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 48px;
+}
+
+/* ---------- [프로토타입 전용] 좌측 상단 테스트 도구: 이동 버튼 + 스크린 연출 노트 (js/nav.js) ---------- */
+.dev-tools {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  width: 340px;
+  z-index: 10000;
+  font-family: "Pretendard", "Malgun Gothic", sans-serif;
+}
+.dev-nav {
+  display: flex;
+  gap: 6px;
+}
+.dev-nav button {
+  padding: 6px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #aaa;
+  background: rgba(40, 40, 40, 0.7);
+  border: 1px solid #444;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.dev-nav button:hover {
+  color: #eee;
+}
+.dev-notes {
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: rgba(20, 20, 20, 0.72);
+  border: 1px solid #444;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #999;
+}
+.dev-notes-head {
+  color: #ccc;
+  cursor: pointer;
+  user-select: none;
+}
+.dev-notes-head::after {
+  content: " ▴";
+  color: #777;
+}
+.notes-collapsed .dev-notes-head::after {
+  content: " ▾";
+}
+.notes-collapsed .dev-notes-list,
+.notes-collapsed .dev-notes-foot {
+  display: none;
+}
+.dev-notes-list {
+  max-height: 45vh;
+  overflow-y: auto;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  scrollbar-width: thin;
+  scrollbar-color: #555 transparent;
+}
+.dev-notes-list li {
+  display: flex;
+  gap: 8px;
+  padding: 2px 0 2px 6px;
+  border-left: 2px solid transparent;
+}
+.dev-notes-list li .t {
+  flex: none;
+  width: 44px;
+  color: #777;
+  font-variant-numeric: tabular-nums;
+}
+.dev-notes-list li.past {
+  opacity: 0.45;
+}
+.dev-notes-list li.now {
+  color: #eee;
+  border-left-color: #d6c48a;
+}
+.dev-notes-list li.now .t {
+  color: #d6c48a;
+}
+.dev-notes-foot {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #3a3a3a;
+  color: #bbb;
+  font-variant-numeric: tabular-nums;
+}

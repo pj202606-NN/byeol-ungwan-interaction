@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>28수 - #1 문</title>
+<link rel="stylesheet" href="css/wireframe.css">
+<link rel="stylesheet" href="css/oracle.css">
+<style>
+  .door {
+    position: relative;
+    width: 260px;
+    height: 380px;
+    cursor: pointer;
+  }
+  .click-hint {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 32px;
+    height: 32px;
+    margin: -16px 0 0 -16px;
+    border: 1px solid var(--color-muted);
+    border-radius: 50%;
+    animation: hintPulse 1.8s ease-in-out infinite;
+  }
+  @keyframes hintPulse {
+    0% { transform: scale(0.6); opacity: 1; }
+    70% { transform: scale(1.6); opacity: 0; }
+    100% { transform: scale(1.6); opacity: 0; }
+  }
+  .door-caption {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 90px;
+    font-size: 18px;
+    height: 30px;
+    color: var(--color-muted);
+    text-align: center;
+  }
+  /* 안내 문구 두 개를 같은 자리에 겹쳐두고 번갈아 크로스페이드 */
+  .door-caption span {
+    position: absolute;
+    left: 0;
+    right: 0;
+    opacity: 0;
+    transition: opacity 1s ease;
+  }
+  .door-caption span.show {
+    opacity: 1;
+  }
+  /* #19에서 돌아올 때는 검은 화면에서 천천히 밝아지도록 */
+  body.from-end {
+    animation-duration: 2s;
+  }
+</style>
+</head>
+<body>
+  <script src="js/fit-screen.js"></script>
+  <script src="js/nav.js"></script>
+  <div class="screen bg-scene" id="screen">
+    <div class="door placeholder" id="door">
+      문 이미지 (영상 연동 예정)
+      <div class="click-hint"></div>
+    </div>
+    <div class="door-caption">
+      <span class="show">문을 두드려 체험을 시작하세요.</span>
+      <span>어떤 문 너머에는 예상치 못한 만남이 있을지도 모릅니다.</span>
+    </div>
+    <div class="page-index">#1 page1_door</div>
+  </div>
+
+  <script>
+    if (location.search.includes('from=end')) document.body.classList.add('from-end');
+
+    showScreenNotes([
+      { at: 0, text: '대기 상태 (연출 미정). 관람객이 문을 누르면 #2의 연출이 시작됨' },
+    ]);
+
+    document.getElementById('door').addEventListener('click', () => {
+      goTo('page2_transition.html');
+    });
+
+    // 안내 문구 순환: 상호작용 없이 3.5초가 지나면 다음 문구로 바뀌고, 화면을 건드리면 첫 문구로 돌아간다
+    const CAPTION_INTERVAL = 3500;
+    const captions = document.querySelectorAll('.door-caption span');
+    let captionIndex = 0;
+    let captionTimer;
+    function showCaption(i) {
+      captionIndex = i;
+      captions.forEach((c, j) => c.classList.toggle('show', j === i));
+    }
+    function scheduleCaption() {
+      clearInterval(captionTimer);
+      captionTimer = setInterval(() => showCaption((captionIndex + 1) % captions.length), CAPTION_INTERVAL);
+    }
+    document.addEventListener('pointerdown', () => {
+      showCaption(0);
+      scheduleCaption();
+    });
+    scheduleCaption();
+  </script>
+</body>
+</html>

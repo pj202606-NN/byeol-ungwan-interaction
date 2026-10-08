@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>28수 - #5 별운관</title>
+<link rel="stylesheet" href="css/wireframe.css">
+<link rel="stylesheet" href="css/oracle.css">
+<style>
+  /*
+    스크린: 대문이 닫힘 → 별운관 내부로 전환 → 창호지 문이 열림 → 내부 전경 → 카메라가 책상 앞에 멈춤
+            → 연기가 흩어지고 다시 모여 점술가 등장 → 점술가의 설명
+    태블릿: 어두운 대기(입력 잠금) → 카메라가 멈추면 어두운 책상 화면 → 설명 자막 → 원래 밝기로
+    밝기는 .room-shade(oracle.css)의 불투명도로 조절한다. (dark → dim → 없음)
+  */
+  /* 어두운 대기 동안만 보이는 흐릿한 파티클 (#4에서 이어지는 느낌) */
+  .shade-haze {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    transition: opacity 2.5s ease-in-out;
+  }
+  .phase-desk .shade-haze,
+  .phase-bright .shade-haze { opacity: 0; }
+
+  .guide-subtitle { z-index: 3; }
+</style>
+</head>
+<body>
+  <script src="js/fit-screen.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/ambient.js"></script>
+  <script src="js/subtitles.js"></script>
+  <div class="screen bg-room" id="screen">
+    <div class="room-shade"></div>
+    <div class="shade-haze" id="haze"></div>
+    <div class="guide-subtitle" id="subtitle"></div>
+    <div class="page-index">#5 page5_oracle_room</div>
+  </div>
+
+  <script>
+    // 타이밍 (단위: ms) - 스크린 영상이 나오면 이 값들만 영상에 맞추면 된다.
+    const DARK_DURATION = 12000;  // 대문 닫힘 → 내부 전환 → 창호지 문 열림 → 전경 → 카메라가 책상 앞에 멈출 때까지
+    const FIGURE_DELAY = 4500;    // 책상 화면이 된 뒤, 연기가 모여 점술가가 등장하고 말을 시작할 때까지
+    const END_DELAY = 1000;       // 마지막 대사가 사라진 뒤 화면이 밝아지기까지
+    const NEXT_DELAY = 3000;      // 밝아진 책상 화면을 보여준 뒤 다음 장면(#6)으로 넘어가기까지
+
+    // 점술가 대사 (임시 문구 - 실제 대본이 나오면 교체)
+    const LINES = [
+      { text: '어서 오세요. 이곳은 별의 운을 읽는 곳, 별운관입니다.', hold: 4900, gap: 900 },
+      { text: '이 하늘의 스물여덟 별자리는 저마다의 이야기를 품고 있지요.', hold: 5300, gap: 900 },
+      { text: '당신이 태어난 그 순간,<br>하늘에 떠 있던 별 하나가 당신의 별이 되었습니다.', hold: 6700, gap: 1100 },
+      { text: '이곳에서 그 별을 찾아,<br>별이 들려주는 이야기에 귀 기울여 보려 합니다.', hold: 6200, gap: 900 },
+      { text: '마음을 편히 하시고, 저를 따라와 주세요.', hold: 4000, gap: 0 },
+    ];
+
+    lockInput();
+    spawnHaze(document.getElementById('haze'), 28);
+
+    const screenEl = document.getElementById('screen');
+    const subtitle = document.getElementById('subtitle');
+
+    async function play() {
+      await subtitleWait(DARK_DURATION);
+      screenEl.classList.add('phase-desk');
+      await subtitleWait(FIGURE_DELAY);
+      await playSubtitles(subtitle, LINES);
+      await subtitleWait(END_DELAY);
+      screenEl.classList.remove('phase-desk');
+      screenEl.classList.add('phase-bright');
+      await subtitleWait(NEXT_DELAY);
+      goToInPlace('page6_birth_paper.html');
+    }
+    const schedule = subtitleSchedule(LINES, DARK_DURATION + FIGURE_DELAY);
+    const brightAt = schedule.end + END_DELAY;
+    showScreenNotes([
+      // 아래 0 ~ 10초 구간은 DARK_DURATION(12초) 안에서 나눈 권장 배분
+      { at: 0, text: '연기가 대문 안으로 들어가고, 대문이 닫힘' },
+      { at: 2500, text: '별운관 내부로 카메라가 자연스럽게 전환' },
+      { at: 5000, text: '창호지 바른 문이 양옆으로 스르륵 열림' },
+      { at: 7500, text: '별운관 메인 장소 전경: 정면의 열린 큰 창, 그 앞의 좌식 책상. 한옥(기와집) 내부, 밤' },
+      { at: 10000, text: '카메라가 책상 쪽으로 살짝 다가가 멈춤' },
+      { at: DARK_DURATION, text: '이동하던 연기가 흩어지고, 다른 연기(하늘거리는 천 같은)가 모여 사람 형태의 점술가 등장 · 태블릿: 어두운 책상 화면' },
+      ...lineNotes(LINES, schedule, '점술가'),
+      { at: brightAt, text: '설명 끝 · 태블릿: 원래 밝기로 밝아짐' },
+      { at: brightAt + NEXT_DELAY, text: '잠시 뜸 → 태블릿 #6으로 끊김 없이 이어짐' },
+    ], { total: brightAt + NEXT_DELAY });
+
+    play();
+  </script>
+</body>
+</html>

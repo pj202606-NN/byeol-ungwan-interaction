@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>28수 - #2 진입 대기</title>
+<link rel="stylesheet" href="css/wireframe.css">
+<link rel="stylesheet" href="css/oracle.css">
+</head>
+<body>
+  <script src="js/fit-screen.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/ambient.js"></script>
+  <div class="screen bg-fade" id="screen">
+    <div class="page-index">#2 page2_transition</div>
+  </div>
+
+  <script>
+    // 임시 구현: 실제로는 상단 스크린 연출이 끝나는 신호(WebSocket)로 대체될 자리
+    const WAIT_DURATION = 16000;
+
+    showScreenNotes([
+      { at: 0, text: '카메라가 아래로 내려가는 듯한 효과와 함께, 관람객이 누른 문이 스크린에 나타남' },
+      { at: 3000, text: '문을 덮고 있던 천이 걷힘' },
+      { at: 6000, text: '문이 열리며 카메라가 문 쪽으로 살짝 다가감' },
+      { at: 9500, text: '문 너머 우주로 슉 진입' },
+      { at: 13000, text: '우주 공간 도착 (여유 구간, 다음 장면으로 이어짐)' },
+      { at: WAIT_DURATION, text: '태블릿 #3으로 전환' },
+    ], { total: WAIT_DURATION + 1200 });
+
+    lockInput();
+    spawnHaze(document.getElementById('screen'), 28);
+
+    setTimeout(() => {
+      goTo('page3_guide_intro.html', 1200);
+    }, WAIT_DURATION);
+  </script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>28수 - #13 키워드 선택</title>
+<link rel="stylesheet" href="css/wireframe.css">
+<link rel="stylesheet" href="css/oracle.css">
+</head>
+<body>
+  <script src="js/fit-screen.js"></script>
+  <script src="js/nav.js"></script>
+  <div class="screen bg-room">
+    <button class="corner-btn" onclick="goTo('page12_fortune_select.html')">뒤로가기</button>
+
+    <div class="tag-columns">
+      <div class="tag-column" onclick="this.classList.toggle('selected')"><span class="tag-label">금전</span></div>
+      <div class="tag-column" onclick="this.classList.toggle('selected')"><span class="tag-label">미래</span></div>
+      <div class="tag-column" onclick="this.classList.toggle('selected')"><span class="tag-label">애정</span></div>
+      <div class="tag-column" onclick="this.classList.toggle('selected')"><span class="tag-label">직장</span></div>
+      <div class="tag-column" onclick="this.classList.toggle('selected')"><span class="tag-label">취미</span></div>
+      <div class="tag-column" onclick="this.classList.toggle('selected')"><span class="tag-label">관계</span></div>
+    </div>
+    <button class="btn" style="position:absolute; left:50%; bottom:110px; transform:translateX(-50%); z-index:2;" onclick="goTo('page14_interpretation.html')">해석 보기</button>
+    <div class="page-index">#13 page13_keyword_select</div>
+  </div>
+</body>
+</html>

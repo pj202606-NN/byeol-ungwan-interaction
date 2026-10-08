@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>28수 - #6 생년월일 종이</title>
+<link rel="stylesheet" href="css/wireframe.css">
+<link rel="stylesheet" href="css/oracle.css">
+<style>
+  /*
+    스크린: (설명이 끝난 뒤 잠시 뜸) → 점술가가 말을 시작하며 손에 종이가 생김 → 대사 → 종이가 아래로 내려감
+    태블릿: 밝은 책상 → 살짝 어두워지며 나래이션 자막 → 다시 밝아지며 생년월일 종이가 위에서 내려옴
+            → '건넨다.'를 눌러야 다음 장면으로 (이 장면만 자동 진행 아님)
+  */
+  .guide-subtitle { z-index: 3; }
+  .room-shade { opacity: 0; }
+
+  /* 종이는 내려올 차례가 되기 전까지 숨겨 둔다 */
+  #panel { visibility: hidden; }
+  #panel.paper-drop,
+  #panel.paper-rise { visibility: visible; }
+
+  .submit-wrap {
+    position: absolute;
+    left: 50%;
+    bottom: 110px;
+    transform: translateX(-50%);
+    z-index: 2;
+  }
+</style>
+</head>
+<body>
+  <script src="js/fit-screen.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/ambient.js"></script>
+  <script src="js/subtitles.js"></script>
+  <div class="screen bg-room" id="screen">
+    <div class="room-shade"></div>
+    <div class="table-panel" id="panel">
+      <div class="subtitle" style="margin:0; font-size:24px; font-family:'KoPub Batang Medium', 'Malgun Gothic', sans-serif;">
+        당신이 이 세상에 태어난 때는 언제인가요?
+      </div>
+      <div class="birth-fields">
+        <span class="birth-field"><button type="button" class="birth-trigger" id="year"></button><ul class="birth-list"></ul><span class="unit">년</span></span>
+        <span class="birth-field"><button type="button" class="birth-trigger" id="month"></button><ul class="birth-list"></ul><span class="unit">월</span></span>
+        <span class="birth-field"><button type="button" class="birth-trigger" id="day"></button><ul class="birth-list"></ul><span class="unit">일</span></span>
+        <span class="birth-field"><button type="button" class="birth-trigger" id="hour"></button><ul class="birth-list"></ul><span class="unit">시</span></span>
+      </div>
+    </div>
+    <div class="submit-wrap">
+      <button class="btn reveal-btn" id="submitBtn">건넨다.</button>
+    </div>
+    <div class="guide-subtitle" id="subtitle"></div>
+    <div class="page-index">#6 page6_birth_paper</div>
+  </div>
+
+  <script>
+    // 타이밍 (단위: ms) - 스크린 영상이 나오면 이 값들만 영상에 맞추면 된다.
+    const START_PAUSE = 2500;   // #5의 설명이 끝나고 점술가가 다시 말을 시작하기 전의 뜸
+    const DIM_TO_TALK = 1200;   // 화면이 어두워지기 시작한 뒤 첫 자막까지 (종이가 손에 생기는 순간)
+    const END_DELAY = 800;      // 마지막 대사가 사라진 뒤 종이가 내려오기까지 (스크린의 종이가 아래로 내려가는 타이밍)
+    const DROP_DURATION = 1300; // 종이가 다 내려온 뒤 '건넨다.' 버튼이 뜨고 입력이 풀림 (paperDrop 애니메이션 길이)
+
+    // 점술가 대사 (임시 문구 - 실제 대본이 나오면 교체)
+    const LINES = [
+      { text: '그럼, 이제 당신에 대해 알아보도록 할까요.', hold: 4000, gap: 900 },
+      { text: '당신의 별을 찾으려면,<br>당신이 처음 이 세상에 온 때를 알아야 하지요.', hold: 5800, gap: 0 },
+    ];
+
+    function fillSelect(id, values) {
+      const trigger = document.getElementById(id);
+      const field = trigger.parentElement;
+      const list = field.querySelector('.birth-list');
+      function choose(v) {
+        trigger.dataset.value = v;
+        trigger.textContent = v;
+        list.querySelectorAll('li').forEach((li) => li.classList.toggle('selected', li.dataset.value == v));
+      }
+      values.forEach((v) => {
+        const li = document.createElement('li');
+        li.dataset.value = v;
+        li.textContent = v;
+        li.addEventListener('click', () => {
+          choose(v);
+          field.classList.remove('open');
+        });
+        list.appendChild(li);
+      });
+      trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const wasOpen = field.classList.contains('open');
+        document.querySelectorAll('.birth-field.open').forEach((f) => f.classList.remove('open'));
+        if (!wasOpen) {
+          field.classList.add('open');
+          const sel = list.querySelector('.selected');
+          if (sel) list.scrollTop = sel.offsetTop - list.clientHeight / 2 + sel.offsetHeight / 2;
+        }
+      });
+      choose(values[0]);
+    }
+    document.addEventListener('click', () => {
+      document.querySelectorAll('.birth-field.open').forEach((f) => f.classList.remove('open'));
+    });
+
+    const years = [];
+    for (let y = 2026; y >= 1950; y--) years.push(y);
+    fillSelect('year', years);
+    fillSelect('month', Array.from({ length: 12 }, (_, i) => i + 1));
+    fillSelect('day', Array.from({ length: 31 }, (_, i) => i + 1));
+    fillSelect('hour', Array.from({ length: 24 }, (_, i) => i));
+
+    lockInput();
+    const screenEl = document.getElementById('screen');
+    const subtitle = document.getElementById('subtitle');
+    const panel = document.getElementById('panel');
+
+    async function play() {
+      await subtitleWait(START_PAUSE);
+      screenEl.classList.add('phase-desk');
+      await subtitleWait(DIM_TO_TALK);
+      await playSubtitles(subtitle, LINES);
+      await subtitleWait(END_DELAY);
+      screenEl.classList.remove('phase-desk');
+      screenEl.classList.add('phase-bright');
+      panel.classList.add('paper-drop');
+      await subtitleWait(DROP_DURATION);
+      document.getElementById('submitBtn').classList.add('revealed');
+      unlockInput();
+    }
+
+    function submitBirth() {
+      document.getElementById('submitBtn').disabled = true;
+      panel.classList.remove('paper-drop');
+      panel.classList.add('paper-rise');
+      setTimeout(() => goTo('page7_birthinput.html'), 800);
+    }
+
+    document.getElementById('submitBtn').addEventListener('click', submitBirth);
+
+    const schedule = subtitleSchedule(LINES, START_PAUSE + DIM_TO_TALK);
+    const dropAt = schedule.end + END_DELAY;
+    showScreenNotes([
+      { at: 0, text: '점술가의 설명이 끝난 뒤 잠시 뜸' },
+      { at: START_PAUSE, text: '점술가가 다시 말하기 시작하며, 손에 못 보던 종이가 생겨남 · 태블릿: 책상이 살짝 어두워짐' },
+      ...lineNotes(LINES, schedule, '점술가'),
+      { at: dropAt, text: '점술가가 쥔 종이가 아래로 내려감 · 태블릿: 생년월일 종이가 책상으로 내려옴' },
+      { at: dropAt + DROP_DURATION, text: '관람객이 생년월일시를 고르고 "건넨다."를 누를 때까지 대기 (점술가 대기 루프)' },
+    ], { total: dropAt + DROP_DURATION, waitInput: true });
+
+    play();
+  </script>
+</body>
+</html>

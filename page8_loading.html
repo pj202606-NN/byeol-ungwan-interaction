@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>28수 - #8 별자리를 찾는 중</title>
+<link rel="stylesheet" href="css/wireframe.css">
+<link rel="stylesheet" href="css/oracle.css">
+</head>
+<body>
+  <script src="js/fit-screen.js"></script>
+  <script src="js/nav.js"></script>
+  <div class="screen bg-room">
+    <div class="constellation-wrap" id="stars"></div>
+    <div class="page-index">#8 page8_loading</div>
+  </div>
+
+  <script>
+    var wrap = document.getElementById('stars');
+    for (var i = 0; i < 24; i++) {
+      var s = document.createElement('span');
+      s.style.top = (10 + Math.random() * 80) + '%';
+      s.style.left = (5 + Math.random() * 90) + '%';
+      s.style.animationDelay = (Math.random() * 3) + 's';
+      wrap.appendChild(s);
+    }
+    // 임시 구현: 별자리 강조 연출 영상이 끝나는 신호로 대체될 자리 (텍스트 없이 로딩 표현)
+    setTimeout(() => {
+      goTo('page9_cardback.html');
+    }, 2600);
+  </script>
+</body>
+</html>

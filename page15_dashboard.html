@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>28수 - #15 오늘의 이야기</title>
+<link rel="stylesheet" href="css/wireframe.css">
+<link rel="stylesheet" href="css/oracle.css">
+<style>
+  .dash-left {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .dash-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  .name-box {
+    width: 460px;
+    min-height: 52px;
+    border: 1px solid var(--color-border);
+    background: rgba(0,0,0,0.4);
+    display: flex;
+    align-items: center;
+    padding: 0 18px;
+    font-size: 20px;
+    margin-bottom: 14px;
+  }
+  .label {
+    font-size: 16px;
+    color: var(--color-muted);
+    margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+  <script src="js/fit-screen.js"></script>
+  <script src="js/nav.js"></script>
+  <div class="screen bg-room">
+    <div class="dashboard-layout" style="margin-bottom:40px;">
+      <div class="dash-left">
+        <div class="card-object" style="width:260px; height:340px;">별자리 이미지</div>
+        <div class="mood-tag">오늘의 기운: 천운</div>
+      </div>
+      <div class="dash-right">
+        <div class="label" style="margin-top:0;">별자리 이름</div>
+        <div class="name-box"></div>
+        <div class="label">소속 사신수</div>
+        <div class="label">상징 동물</div>
+        <div class="label" style="margin-bottom:16px;">성격 키워드</div>
+        <div class="dashboard-cards">
+          <div class="dashboard-card">오늘의 운세 요약</div>
+          <div class="dashboard-card">이달의 운세 요약</div>
+          <div class="dashboard-card">올해의 운세 요약</div>
+        </div>
+      </div>
+    </div>
+    <button class="btn" style="position:absolute; left:50%; bottom:70px; transform:translateX(-50%); z-index:2;" onclick="goTo('page16_fadeout.html')">다음</button>
+    <div class="page-index">#15 page15_dashboard</div>
+  </div>
+</body>
+</html>

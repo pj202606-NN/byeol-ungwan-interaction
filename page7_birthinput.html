@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>28수 - #7 생년월일시</title>
+<link rel="stylesheet" href="css/wireframe.css">
+<link rel="stylesheet" href="css/oracle.css">
+</head>
+<body>
+  <script src="js/fit-screen.js"></script>
+  <script src="js/nav.js"></script>
+  <div class="screen bg-room">
+    <div class="table-panel paper-drop" id="panel">
+      <div class="subtitle" style="margin:0; font-size:24px; font-family:'KoPub Batang Medium', 'Malgun Gothic', sans-serif;">
+        당신이 이 세상에 태어난 때는 언제인가요?
+      </div>
+      <div class="birth-fields">
+        <span class="birth-field"><button type="button" class="birth-trigger" id="year"></button><ul class="birth-list"></ul><span class="unit">년</span></span>
+        <span class="birth-field"><button type="button" class="birth-trigger" id="month"></button><ul class="birth-list"></ul><span class="unit">월</span></span>
+        <span class="birth-field"><button type="button" class="birth-trigger" id="day"></button><ul class="birth-list"></ul><span class="unit">일</span></span>
+        <span class="birth-field"><button type="button" class="birth-trigger" id="hour"></button><ul class="birth-list"></ul><span class="unit">시</span></span>
+      </div>
+    </div>
+    <button class="btn" id="submitBtn" style="position:absolute; left:50%; bottom:110px; transform:translateX(-50%); z-index:2;" onclick="submitBirth()">건넨다.</button>
+    <div class="page-index">#7 page7_birthinput</div>
+  </div>
+
+  <script>
+    // 커스텀 드롭다운: 선택값은 각 버튼의 dataset.value에 저장
+    function fillSelect(id, values) {
+      const trigger = document.getElementById(id);
+      const field = trigger.parentElement;
+      const list = field.querySelector('.birth-list');
+      function choose(v) {
+        trigger.dataset.value = v;
+        trigger.textContent = v;
+        list.querySelectorAll('li').forEach((li) => li.classList.toggle('selected', li.dataset.value == v));
+      }
+      values.forEach((v) => {
+        const li = document.createElement('li');
+        li.dataset.value = v;
+        li.textContent = v;
+        li.addEventListener('click', () => {
+          choose(v);
+          field.classList.remove('open');
+        });
+        list.appendChild(li);
+      });
+      trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const wasOpen = field.classList.contains('open');
+        document.querySelectorAll('.birth-field.open').forEach((f) => f.classList.remove('open'));
+        if (!wasOpen) {
+          field.classList.add('open');
+          const sel = list.querySelector('.selected');
+          if (sel) list.scrollTop = sel.offsetTop - list.clientHeight / 2 + sel.offsetHeight / 2;
+        }
+      });
+      choose(values[0]);
+    }
+    document.addEventListener('click', () => {
+      document.querySelectorAll('.birth-field.open').forEach((f) => f.classList.remove('open'));
+    });
+
+    const years = [];
+    for (let y = 2026; y >= 1950; y--) years.push(y);
+    fillSelect('year', years);
+    fillSelect('month', Array.from({ length: 12 }, (_, i) => i + 1));
+    fillSelect('day', Array.from({ length: 31 }, (_, i) => i + 1));
+    fillSelect('hour', Array.from({ length: 24 }, (_, i) => i));
+
+    function submitBirth() {
+      document.getElementById('submitBtn').disabled = true;
+      const panel = document.getElementById('panel');
+      panel.classList.remove('paper-drop');
+      panel.classList.add('paper-rise');
+      setTimeout(() => goTo('page8_loading.html'), 800);
+    }
+  </script>
+</body>
+</html>

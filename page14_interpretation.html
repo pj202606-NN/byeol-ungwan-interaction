@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>28수 - #14 운세 해석</title>
+<link rel="stylesheet" href="css/wireframe.css">
+<link rel="stylesheet" href="css/oracle.css">
+<style>
+  .handle-bar {
+    width: 720px;
+    height: 8px;
+    border-radius: 6px;
+    background: linear-gradient(180deg, #6a6a6a 0%, #9a9a9a 100%);
+    cursor: pointer;
+    z-index: 2;
+  }
+  .chevron-btn {
+    margin: 10px 0 28px;
+    font-size: 16px;
+    color: var(--color-muted);
+    cursor: pointer;
+    z-index: 2;
+  }
+  .detail-card {
+    width: 720px;
+    max-height: 0;
+    overflow: hidden;
+    background: linear-gradient(180deg, #3a3a3a 0%, #8a8a8a 100%);
+    border-radius: 8px;
+    color: #262626;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: max-height 0.5s cubic-bezier(.22,.61,.36,1);
+    margin-bottom: 28px;
+    z-index: 2;
+  }
+  .detail-card.open {
+    max-height: 260px;
+  }
+</style>
+</head>
+<body>
+  <script src="js/fit-screen.js"></script>
+  <script src="js/nav.js"></script>
+  <div class="screen bg-room">
+    <div class="title" style="font-size:30px; font-family:'KoPub Batang Medium', 'Malgun Gothic', sans-serif;">올해의 관계운</div>
+    <div class="subtitle" style="max-width:1100px; z-index:2; font-family:'KoPub Batang Medium', 'Malgun Gothic', sans-serif;">
+      올해는 새로운 인연과 기회가 찾아오는 해입니다.<br>
+      다만 급한 결정은 피하고 신중하게 접근하는 것이 좋겠습니다.
+    </div>
+
+    <div class="handle-bar" id="handleBar" onclick="toggleDetail()"></div>
+    <div class="detail-card" id="detailCard">상세 해석</div>
+    <div class="chevron-btn" id="chevron" onclick="toggleDetail()">⌄</div>
+
+    <div style="display:flex; gap:40px; margin-top:56px; z-index:2;">
+      <button class="btn" onclick="goTo('page13_keyword_select.html')">다른 이야기 듣기</button>
+      <button class="btn" onclick="goTo('page15_dashboard.html')">이야기 마치기</button>
+    </div>
+    <div class="page-index">#14 page14_interpretation</div>
+  </div>
+
+  <script>
+    function toggleDetail() {
+      const card = document.getElementById('detailCard');
+      const chevron = document.getElementById('chevron');
+      const open = !card.classList.contains('open');
+      card.classList.toggle('open', open);
+      chevron.textContent = open ? '⌃' : '⌄';
+    }
+  </script>
+</body>
+</html>

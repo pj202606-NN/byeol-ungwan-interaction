@@ -1,0 +1,494 @@
+/*
+  '28수' 체험 본 흐름(#1~#19) 전용 스타일.
+  wireframe.css의 --screen-width/height, .screen, .page-index, fit-screen.js는
+  그대로 재사용하고, 여기서는 이 흐름에서만 쓰이는 배경/컴포넌트만 정의한다.
+*/
+
+/* ---------- 배경 두 종류 ---------- */
+/* type A: 문 밖 / 전환구간에서 쓰는 단순 비네트 그라디언트 */
+.bg-scene {
+  background:
+    radial-gradient(ellipse at 30% 0%, #2a2a2a 0%, rgba(0,0,0,0) 55%),
+    linear-gradient(180deg, #1a1a1a 0%, #000 75%);
+}
+
+/* 페이드 전환(검은 화면이 아래에서 위로 차오르는 연출) */
+.bg-fade {
+  background: #000;
+}
+.fade-rise {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 0;
+  background: linear-gradient(180deg, #111 0%, #000 100%);
+  animation: fadeRise 1.6s ease-out forwards;
+}
+@keyframes fadeRise {
+  from { height: 0; }
+  to { height: 100%; }
+}
+
+/* 별(점)들이 떠다니는 느낌의 오버레이 (현재 사용하는 페이지 없음) */
+.floating-dot {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-fg);
+  opacity: 0.6;
+  animation: floatDot 4s ease-in-out infinite;
+}
+@keyframes floatDot {
+  0%, 100% { transform: translateY(0); opacity: 0.2; }
+  50% { transform: translateY(-24px); opacity: 0.8; }
+}
+
+/* type B: 운세소(안내자와 마주하는 공간) 배경 */
+.bg-room {
+  background-image: url('../assets/bg-oracle-room.png');
+  background-size: cover;
+  background-position: center;
+}
+
+/* ---------- 대사/선택 버튼 ---------- */
+.dialogue-box {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--color-border);
+  padding: 40px 56px;
+  font-size: 21px;
+  font-weight: 400;
+  color: var(--color-fg);
+  line-height: 1.8;
+  max-width: 1100px;
+  margin-bottom: 48px;
+}
+
+/* 영상이 끝나야 떠오르는 선택 버튼: 기본은 숨김, .revealed가 붙으면 등장 */
+.reveal-btn {
+  opacity: 0;
+  transform: translateY(22px);
+  pointer-events: none;
+  transition: opacity 1.1s cubic-bezier(.22,.61,.36,1), transform 1.1s cubic-bezier(.22,.61,.36,1);
+}
+.reveal-btn.revealed {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+/* 선택지가 뜰 때 배경을 살짝 어둡게+흐리게 (스펙 명시 사항) */
+.dim-on-reveal::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  backdrop-filter: blur(2px);
+  opacity: 0;
+  transition: opacity 1.1s cubic-bezier(.22,.61,.36,1);
+  z-index: 1;
+  pointer-events: none;
+}
+.dim-on-reveal.revealed-bg::before {
+  opacity: 1;
+}
+
+/* ---------- 카드 오브젝트 ---------- */
+.card-object {
+  background: linear-gradient(180deg, #4a4a4a 0%, #9a9a9a 100%);
+  border-radius: 12px;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.16);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-fg);
+  font-size: 16px;
+  z-index: 2;
+}
+
+/* 위에서 아래로 카드가 내려오는 연출 */
+.card-drop {
+  animation: cardDrop 1.2s cubic-bezier(.2,.8,.3,1) both;
+}
+@keyframes cardDrop {
+  from { transform: translateY(-480px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* ---------- 상세설명/상세해석 아코디언 ---------- */
+.accordion-btn {
+  min-height: 60px;
+  padding: 0 36px;
+  font-size: 18px;
+  font-weight: 400;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-muted);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.accordion-panel {
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.5s cubic-bezier(.22,.61,.36,1);
+  background: rgba(0,0,0,0.5);
+  border: 1px solid var(--color-border);
+  border-top: none;
+  color: var(--color-muted);
+  font-size: 17px;
+}
+.accordion-panel.open {
+  max-height: 320px;
+}
+.accordion-panel .inner {
+  padding: 32px;
+}
+.chevron {
+  font-size: 20px;
+  color: var(--color-muted);
+  margin-top: 8px;
+}
+
+/* ---------- 키워드 태그(천장에 매달린 큰 천 조각) ---------- */
+/* 화면 맨 위(top:0)에 붙어 아래로 늘어진 형태. 텍스트는 좌하단에 배치. */
+.tag-columns {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 77px;
+  z-index: 2;
+}
+.tag-column {
+  position: relative;
+  width: 169px;
+  height: 740px;
+  background: linear-gradient(180deg, #55565c 0%, #9a9ba0 100%);
+  cursor: pointer;
+  border: 2px solid transparent;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.16);
+}
+.tag-column.selected {
+  border-color: var(--color-fg);
+}
+.tag-label {
+  position: absolute;
+  left: 28px;
+  bottom: 40px;
+  writing-mode: vertical-rl;
+  font-size: 24px;
+  font-weight: 500;
+  font-family: 'KoPub Batang Medium', 'Malgun Gothic', sans-serif;
+  color: var(--color-fg);
+}
+
+/* ---------- 생년월일시 입력 (원근감 있는 종이/테이블 패널) ---------- */
+/* 위에서 아래로 내려오는 큰 종이처럼, 위쪽이 살짝 좁고 아래쪽이 넓은 원근 사다리꼴.
+   타블렛-6 참고 이미지 비율(위 91% : 아래 100%)에 맞춘 완만한 기울기. */
+.table-panel {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 1300px;
+  height: 700px;
+  background:
+    radial-gradient(ellipse at center, rgba(0,0,0,0) 55%, rgba(0,0,0,0.22) 100%),
+    linear-gradient(180deg, #5c5c5c 0%, #9a9a9a 100%);
+  box-shadow: inset 0 0 70px rgba(0,0,0,0.2);
+  clip-path: polygon(4.5% 0%, 95.5% 0%, 100% 100%, 0% 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 200px;
+  gap: 64px;
+  z-index: 2;
+  color: var(--color-fg);
+}
+.table-panel .subtitle {
+  color: var(--color-fg);
+}
+
+/* 종이가 스크린 위쪽 끝에 맞닿은 채로 내려오는 연출 (top:0 고정, 수평 중앙은 translateX로 유지) */
+.paper-drop {
+  animation: paperDrop 1.3s cubic-bezier(.22,.61,.36,1) both;
+}
+@keyframes paperDrop {
+  from { transform: translate(-50%, -100%); opacity: 0; }
+  to { transform: translate(-50%, 0%); opacity: 1; }
+}
+/* 건넨다 클릭 시 종이가 다시 위로 올라가는 연출 */
+.paper-rise {
+  animation: paperRise 0.9s cubic-bezier(.4,0,.7,1) both;
+}
+@keyframes paperRise {
+  from { transform: translate(-50%, 0%); opacity: 1; }
+  to { transform: translate(-50%, -100%); opacity: 0; }
+}
+
+.birth-fields {
+  display: flex;
+  align-items: baseline;
+  gap: 28px;
+  font-size: 22px;
+}
+.birth-field {
+  position: relative;
+  display: inline-flex;
+  align-items: baseline;
+}
+/* 커스텀 드롭다운 (기본 select 목록은 OS가 그려서 스타일 조절이 안 됨) */
+.birth-trigger {
+  width: 110px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--color-fg);
+  color: var(--color-fg);
+  font-size: 22px;
+  font-family: inherit;
+  text-align: center;
+  padding: 0 18px 6px 4px;
+  cursor: pointer;
+}
+.birth-list {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 110px;
+  max-height: 280px;
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+  overflow-y: auto;
+  background: rgba(24, 24, 24, 0.94);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+  z-index: 10;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-muted) transparent;
+}
+.birth-field.open .birth-list {
+  display: block;
+}
+.birth-list li {
+  padding: 8px 0;
+  font-size: 20px;
+  text-align: center;
+  color: var(--color-muted);
+  cursor: pointer;
+}
+.birth-list li:hover {
+  color: var(--color-fg);
+  background: rgba(255, 255, 255, 0.06);
+}
+.birth-list li.selected {
+  color: var(--color-fg);
+}
+.birth-field::after {
+  content: "▾";
+  position: absolute;
+  right: 2px;
+  bottom: 6px;
+  font-size: 12px;
+  color: var(--color-muted);
+  pointer-events: none;
+}
+.birth-field .unit {
+  margin-left: 8px;
+}
+
+/* ---------- 로딩(별자리 찾는 중) 떠다니는 점자리 ---------- */
+.constellation-wrap {
+  position: absolute;
+  inset: 0;
+}
+.constellation-wrap span {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--color-fg);
+  animation: twinkle 3s ease-in-out infinite;
+}
+@keyframes twinkle {
+  0%, 100% { opacity: 0; transform: scale(0.6); }
+  50% { opacity: 1; transform: scale(1.4); }
+}
+
+/* ---------- 카드 상세(별자리 정보) 2단 레이아웃 ---------- */
+.detail-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 72px;
+  z-index: 2;
+}
+.detail-info {
+  text-align: left;
+  padding-top: 8px;
+}
+.detail-info .name {
+  font-size: 30px;
+  font-weight: 500;
+  margin-bottom: 28px;
+}
+.detail-info .row {
+  font-size: 18px;
+  color: var(--color-muted);
+  margin-bottom: 14px;
+}
+
+/* ---------- 대시보드(최종 결과) ---------- */
+.dashboard-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 48px;
+  z-index: 2;
+}
+.dashboard-cards {
+  display: flex;
+  gap: 32px;
+}
+.dashboard-card {
+  width: 260px;
+  height: 340px;
+  background: rgba(0,0,0,0.45);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-muted);
+  font-size: 16px;
+  text-align: center;
+  padding: 20px;
+}
+.mood-tag {
+  margin-top: 20px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 14px 20px;
+  font-size: 16px;
+  color: var(--color-muted);
+}
+
+/* ---------- 코너 고정 버튼(다음 / 뒤로가기) ---------- */
+.corner-btn {
+  position: absolute;
+  top: 40px;
+  left: 40px;
+  min-height: 60px;
+  padding: 0 36px;
+  font-size: 18px;
+  font-weight: 400;
+  /* 배경 이미지 위 어디에 놓여도 테두리가 묻히지 않도록 살짝 어둡게 깔아준다 */
+  background: rgba(0,0,0,0.4);
+  border: 1px solid var(--color-fg);
+  color: var(--color-muted);
+  border-radius: 6px;
+  cursor: pointer;
+  z-index: 3;
+}
+
+/* ---------- QR 카드 ---------- */
+.qr-card {
+  width: 380px;
+  height: 540px;
+  background: linear-gradient(180deg, #4a4a4a 0%, #9a9a9a 100%);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 56px;
+}
+.qr-card .qr-box {
+  width: 280px;
+  height: 280px;
+  background: #1a1a1a;
+  color: var(--color-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+}
+
+/* ---------- 은은한 우주 배경 (#2, #3, #4 공용, 생성은 js/ambient.js) ---------- */
+.input-locked .screen {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.milky-band {
+  position: absolute;
+  left: -20%;
+  top: 30%;
+  width: 140%;
+  height: 40%;
+  background: radial-gradient(ellipse at center, rgba(150,160,200,0.10) 0%, rgba(110,110,160,0.05) 40%, rgba(0,0,0,0) 70%);
+  transform: rotate(-14deg);
+  filter: blur(30px);
+  animation: bandBreath 14s ease-in-out infinite;
+}
+@keyframes bandBreath {
+  0%, 100% { opacity: 0.7; transform: rotate(-14deg) scale(1); }
+  50% { opacity: 1; transform: rotate(-12deg) scale(1.06); }
+}
+.smoke {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(190,190,215,0.09) 0%, rgba(0,0,0,0) 70%);
+  filter: blur(40px);
+  animation: smokeDrift ease-in-out infinite alternate;
+}
+@keyframes smokeDrift {
+  from { transform: translate(0, 0) scale(1); }
+  to { transform: translate(var(--dx), var(--dy)) scale(1.25); }
+}
+.haze-particle {
+  position: absolute;
+  border-radius: 50%;
+  background: #cfd3e0;
+  opacity: 0;
+  animation: hazeDrift linear infinite;
+}
+@keyframes hazeDrift {
+  0%   { transform: translate(0, 0); opacity: 0; }
+  20%  { opacity: var(--peak); }
+  80%  { opacity: var(--peak); }
+  100% { transform: translate(var(--dx), var(--dy)); opacity: 0; }
+}
+
+/* ---------- 나래이션 자막 (#3, #5 공용, 재생은 js/subtitles.js) ---------- */
+/* 자막: 화면 중앙에 흐릿하게 떠올랐다가 흐릿하게 사라진다 */
+.guide-subtitle {
+  position: relative;
+  z-index: 2;
+  max-width: 1400px;
+  padding: 0 80px;
+  font-family: 'KoPub Batang Medium', 'Malgun Gothic', serif;
+  font-size: 32px;
+  line-height: 1.9;
+  text-align: center;
+  color: var(--color-fg);
+  text-shadow: 0 0 18px rgba(200,205,230,0.35);
+  opacity: 0;
+  filter: blur(6px);
+  transition: opacity 1.4s ease, filter 1.4s ease;
+}
+.guide-subtitle.show {
+  opacity: 1;
+  filter: blur(0);
+}
+
+/* ---------- 운세소 책상 화면 밝기 조절 막 (#5, #6 공용) ---------- */
+.room-shade {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  opacity: 1;
+  z-index: 1;
+  transition: opacity 2.5s ease-in-out;
+}
+.phase-desk .room-shade { opacity: 0.62; }
+.phase-bright .room-shade { opacity: 0; transition-duration: 2.2s; }
