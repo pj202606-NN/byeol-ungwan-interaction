@@ -6,6 +6,43 @@
 <link rel="stylesheet" href="css/wireframe.css">
 <link rel="stylesheet" href="css/oracle.css">
 <style>
+  /*
+    스크린: (#14 '이야기 마치기' 직후) 운세 색·밝기를 띠던 별자리가 본래의 밝은 빛으로 → 점술가가 손을 내리고 별빛·운세 요소가 가장자리로 퍼짐
+            (카메라 초점: 별자리 → 점술가, 창밖 밤하늘에는 관람객의 별자리가 반짝임) → 퍼진 요소가 점술가 쪽 중앙으로 모임
+            → 연기가 일렁이고 별빛이 반짝이는 루프 ('다음'을 누를 때까지)
+    태블릿: (#14의 요소가 사라진 책상에서 끊김 없이 이어짐) 잠시 어두워짐, 입력 잠금 + 점술가의 나래이션 자막
+            → 스크린에서 요소가 중앙으로 모이는 순간 밝아지며 운세 총정리 화면이 스르륵 나타남 → '다음'을 누르면 #16
+  */
+  .room-shade { opacity: 0; transition: opacity 1s ease-in-out; }
+  .phase-dim .room-shade { opacity: 0.55; }
+  .phase-show .room-shade { opacity: 0; transition-duration: 1.5s; }
+
+  .dashboard-layout,
+  #nextBtn {
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity 1.2s ease, transform 1.2s cubic-bezier(.22,.61,.36,1);
+  }
+  .phase-show .dashboard-layout { opacity: 1; transform: translateY(0); transition-delay: 0.3s; }
+  .phase-show #nextBtn { opacity: 1; transform: translateX(-50%); transition-delay: 1s; }
+  #nextBtn {
+    position: absolute;
+    left: 50%;
+    bottom: 70px;
+    transform: translate(-50%, 16px);
+    z-index: 2;
+  }
+
+  .guide-subtitle {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    margin: 0 auto;
+    transform: translateY(-50%);
+    z-index: 3;
+  }
+
   .dash-left {
     display: flex;
     flex-direction: column;
@@ -38,7 +75,10 @@
 <body>
   <script src="js/fit-screen.js"></script>
   <script src="js/nav.js"></script>
-  <div class="screen bg-room">
+  <script src="js/ambient.js"></script>
+  <script src="js/subtitles.js"></script>
+  <div class="screen bg-room" id="screen">
+    <div class="room-shade"></div>
     <div class="dashboard-layout" style="margin-bottom:40px;">
       <div class="dash-left">
         <div class="card-object" style="width:260px; height:340px;">별자리 이미지</div>
@@ -57,8 +97,55 @@
         </div>
       </div>
     </div>
-    <button class="btn" style="position:absolute; left:50%; bottom:70px; transform:translateX(-50%); z-index:2;" onclick="goTo('page16_fadeout.html')">다음</button>
+    <button class="btn" id="nextBtn">다음</button>
+    <div class="guide-subtitle" id="subtitle"></div>
     <div class="page-index">#15 page15_dashboard</div>
   </div>
+
+  <script>
+    // 타이밍 (단위: ms) - 스크린 영상이 나오면 이 값들만 영상에 맞추면 된다.
+    const DIM_AT = 100;          // #14에서 이어지자마자 책상이 어두워짐
+    const SPREAD_AT = 0;         // 스크린: 점술가가 손을 내리고 별빛·운세 요소가 가장자리로 퍼짐, 카메라 초점이 점술가로
+    const TALK_AT = 800;         // 퍼지는 동안 점술가의 나래이션 시작
+    const SHOW_DELAY = 300;      // 나래이션이 끝나고(= 요소가 중앙에 다 모인 순간) 총정리 화면이 나타나기까지
+
+    // 점술가 나래이션: 두 번째 대사("모아 드리겠습니다")와 함께 퍼진 요소가 중앙으로 모이기 시작한다
+    const LINES = [
+      { text: '궁금한 이야기는 충분히 눈에 담으셨나요?', hold: 3200, gap: 700 },
+      { text: '오늘 이곳에서 만난 별의 이야기를 모아 드리겠습니다.', hold: 3800, gap: 0 },
+    ];
+    const schedule = subtitleSchedule(LINES, TALK_AT);
+    const GATHER_AT = schedule.starts[1];          // 스크린: 퍼진 요소가 점술가 쪽 중앙으로 모이기 시작
+    const SHOW_AT = schedule.end + SHOW_DELAY;     // 스크린: 중앙으로 다 모인 순간 → 태블릿이 밝아지며 총정리 화면이 나타남
+    const UNLOCK_AT = SHOW_AT + 2000;              // 총정리 화면과 '다음' 버튼이 다 나타난 뒤 입력 허용
+
+    lockInput();
+    const screenEl = document.getElementById('screen');
+    setTimeout(() => screenEl.classList.add('phase-dim'), DIM_AT);
+    setTimeout(() => playSubtitles(document.getElementById('subtitle'), LINES), TALK_AT);
+    setTimeout(() => {
+      screenEl.classList.remove('phase-dim');
+      screenEl.classList.add('phase-show');
+    }, SHOW_AT);
+    setTimeout(unlockInput, UNLOCK_AT);
+
+    // 다음: 총정리 화면이 스르륵 사라지고, 같은 책상 그대로 #16으로 끊김 없이 이어진다
+    const EXIT_MS = 1200;
+    document.getElementById('nextBtn').addEventListener('click', () => {
+      lockInput();
+      screenEl.classList.remove('phase-show');
+      setTimeout(() => goToInPlace('page16_gift_card.html'), EXIT_MS);
+    });
+
+    showScreenNotes([
+      { at: -900, text: '(#14에서 "이야기 마치기" 직후) 관람객의 운세 색·밝기를 띠던 별자리 그래픽이 본래의 밝은 빛으로 돌아감 · 태블릿: #14의 요소가 스르륵 사라짐' },
+      { at: SPREAD_AT, text: '점술가가 손을 자연스럽게 내리며, 별빛과 운세 요소가 화면 가장자리로 은은하게 퍼짐. 카메라 초점이 별자리에서 점술가로 부드럽게 옮겨감 (등 뒤 창밖 밤하늘에는 관람객의 별자리와 별빛이 반짝임) · 태블릿: 책상이 어두워지고 입력 잠금' },
+      ...lineNotes(LINES, schedule, '점술가 나래이션').map((n, i) => (i === 1
+        ? { at: n.at, text: n.text + ' · 퍼졌던 별빛과 운세 요소가 점술가의 몸·손이 있는 중앙으로 자연스럽게 모여듦' }
+        : { at: n.at, text: n.text + ' · 태블릿: 어두운 책상 위 자막' })),
+      { at: SHOW_AT, text: '중앙으로 다 모임 · 태블릿: 밝아지며 운세 총정리 화면이 스르륵 나타남' },
+      { at: UNLOCK_AT, text: '루프: 연기가 일렁이고 별빛이 반짝임. 관람객이 총정리를 확인하고 "다음"을 누를 때까지 반복 (누르면 #16으로)' },
+    ], { total: UNLOCK_AT, waitInput: true });
+  </script>
 </body>
 </html>

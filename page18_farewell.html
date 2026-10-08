@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>별운관 체험 - #18 마지막 인사</title>
+<link rel="stylesheet" href="css/wireframe.css">
+<link rel="stylesheet" href="css/oracle.css">
+<style>
+  /*
+    스크린: 점술가가 처음 별운관에 들어왔을 때의 자세 그대로 반듯하게 앉아 마지막 인사 (나래이션 2줄)
+    태블릿: (#17의 책상·카드에서 끊김 없이 이어짐) 입력 잠금, 카드(QR)가 먼저 깔끔하게 사라진 뒤 책상이 천천히 어둠에 잠기고
+            초반 장면처럼 연기와 흐릿한 파티클이 은은하게 떠오름 → 자동으로 #19
+  */
+  /* #17의 카드(QR 면)와 같은 자리 */
+  .farewell-card {
+    position: absolute;
+    left: 790px;
+    top: 242px;
+    width: 340px;
+    height: 480px;
+    transition: opacity 1.2s ease, transform 1.2s ease;
+  }
+  /* 카드(QR)는 어두워지기 전에 먼저 깔끔하게 사라진다 */
+  .phase-card-out .farewell-card { opacity: 0; transform: scale(0.97); }
+  .farewell-card .qr-box {
+    width: 240px;
+    height: 240px;
+    background: #1a1a1a;
+    color: var(--color-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+  }
+  /* 책상과 카드를 덮는 어둠: 처음엔 투명 → 아주 천천히 짙어짐 (#19에서 아래부터 완전히 덮인다) */
+  .room-shade {
+    opacity: 0;
+    z-index: 3;
+    transition: opacity 12s cubic-bezier(.4,0,.6,1);
+  }
+  .phase-dark .room-shade { opacity: 0.82; }
+  /* 초반 장면의 연기·파티클이 어둠 위로 은은하게 떠오름 */
+  .ambient-field {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    opacity: 0;
+    transition: opacity 10s ease-in;
+  }
+  .phase-dark .ambient-field { opacity: 1; }
+  .guide-subtitle {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 120px;
+    margin: 0 auto;
+    z-index: 5;
+  }
+</style>
+</head>
+<body>
+  <script src="js/fit-screen.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/ambient.js"></script>
+  <script src="js/subtitles.js"></script>
+  <div class="screen bg-room" id="screen">
+    <div class="card-object farewell-card"><div class="qr-box">QR코드 이미지</div></div>
+    <div class="room-shade"></div>
+    <div class="ambient-field" id="field">
+      <div class="milky-band"></div>
+    </div>
+    <div class="guide-subtitle" id="subtitle"></div>
+    <div class="page-index">#18 page18_farewell</div>
+  </div>
+
+  <script>
+    // 타이밍 (단위: ms) - 스크린 영상이 나오면 이 값들만 영상에 맞추면 된다.
+    const CARD_OUT_AT = 300;   // 카드(QR)가 먼저 사라짐 (1.2초)
+    const DARK_AT = 1500;      // 카드가 사라진 뒤 책상이 천천히 어두워지기 시작 (약 12초에 걸쳐)
+    const TALK_AT = 1200;      // 점술가의 마지막 인사 시작
+    const END_DELAY = 800;     // 인사가 끝난 뒤 #19로 넘어가기까지
+
+    const LINES = [
+      { text: '당신의 하루는 계속해서 이어지겠지요.', hold: 3200, gap: 800 },
+      { text: '다음번의 만남을 고대하고 있겠습니다.', hold: 3400, gap: 0 },
+    ];
+    const schedule = subtitleSchedule(LINES, TALK_AT);
+    const NEXT_AT = schedule.end + END_DELAY;
+
+    lockInput();
+    const screenEl = document.getElementById('screen');
+    const field = document.getElementById('field');
+    spawnSmoke(field, 6);
+    spawnHaze(field, 30);
+    setTimeout(() => screenEl.classList.add('phase-card-out'), CARD_OUT_AT);
+    setTimeout(() => screenEl.classList.add('phase-dark'), DARK_AT);
+    setTimeout(() => playSubtitles(document.getElementById('subtitle'), LINES), TALK_AT);
+    setTimeout(() => goToInPlace('page19_pullback.html', { crossfade: 1200 }), NEXT_AT);
+
+    showScreenNotes([
+      { at: -1000, text: '(#17에서 "떠나기" 직후) 작별 대기 루프에서, 점술가가 처음 별운관에 들어왔을 때의 자세로 반듯하게 고쳐 앉음 · 태블릿: 문장과 버튼이 사라짐' },
+      { at: 0, text: '반듯하게 앉은 점술가 · 태블릿: 입력 잠금, 카드(QR)가 먼저 깔끔하게 사라짐' },
+      { at: DARK_AT, text: '태블릿: 책상이 아주 천천히 어둠에 잠기며 연기·파티클이 은은하게 떠오름' },
+      ...lineNotes(LINES, schedule, '점술가 마지막 인사'),
+      { at: NEXT_AT, text: '태블릿 #19로 이어짐' },
+    ], { total: NEXT_AT });
+  </script>
+</body>
+</html>

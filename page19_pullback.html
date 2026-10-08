@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>별운관 체험 - #19 별운관 밖으로</title>
+<link rel="stylesheet" href="css/wireframe.css">
+<link rel="stylesheet" href="css/oracle.css">
+<style>
+  /*
+    스크린: 입장 과정을 거꾸로 되감듯, 카메라가 점술가와 책상에서 뒤로 멀어지며 실내 입장 경로를 거슬러
+            별운관 대문 밖으로 끌려 나옴. 움직임이 단계적으로 빨라짐
+    태블릿: (#18의 어두워진 책상에서 이어짐) 입력 잠금, 카메라 움직임에 맞춰 화면 아래에서 어둠이 차올라
+            책상이 완전히 사라지고 초반 장면의 배경(연기·은하·파티클)만 남음 → 자동으로 #20
+  */
+  .room-shade { opacity: 0.82; z-index: 3; }
+  /* 아래에서 차오르는 어둠: 경계가 아주 흐린 긴 그라데이션이 화면 아래에서 밀려 올라온다.
+     (화면 2.5배 높이의 막 중 위쪽 절반 이상이 서서히 옅어지는 구간이라 '커튼 끝선'이 보이지 않는다)
+     카메라가 점점 빨라지듯 처음엔 느리게, 갈수록 빠르게 */
+  .rise-dark {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 250%;
+    z-index: 3;
+    pointer-events: none;
+    transform: translateY(100%);
+    background: linear-gradient(0deg,
+      #000 0%, #000 42%,
+      rgba(0,0,0,0.85) 52%, rgba(0,0,0,0.55) 64%,
+      rgba(0,0,0,0.25) 78%, rgba(0,0,0,0.08) 90%, rgba(0,0,0,0) 100%);
+  }
+  .phase-rise .rise-dark {
+    transform: translateY(0);
+    transition: transform var(--rise-ms) cubic-bezier(.55,0,.85,.45);
+  }
+  .ambient-field {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+  }
+</style>
+</head>
+<body>
+  <script src="js/fit-screen.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/ambient.js"></script>
+  <div class="screen bg-room" id="screen">
+    <div class="room-shade"></div>
+    <div class="rise-dark"></div>
+    <div class="ambient-field" id="field">
+      <div class="milky-band"></div>
+    </div>
+    <div class="page-index">#19 page19_pullback</div>
+  </div>
+
+  <script>
+    // 타이밍 (단위: ms) - 스크린 영상이 나오면 이 값들만 영상에 맞추면 된다.
+    const RISE_AT = 400;        // 카메라가 뒤로 멀어지기 시작 = 어둠이 아래에서 차오르기 시작
+    const FASTER_AT = 2000;     // 스크린: 창호지 문을 지나 실내 입장 경로를 거슬러 더 빠르게
+    const FASTEST_AT = 3800;    // 스크린: 별운관 대문 밖으로 끌려 나옴 (가장 빠름)
+    const OUTSIDE_AT = 5200;    // 스크린: 대문 밖. 태블릿은 어둠이 화면을 다 덮음
+    const NEXT_AT = 6000;       // #20으로 이어짐
+
+    lockInput();
+    const screenEl = document.getElementById('screen');
+    const field = document.getElementById('field');
+    spawnSmoke(field, 6);
+    spawnHaze(field, 30);
+    screenEl.style.setProperty('--rise-ms', (OUTSIDE_AT - RISE_AT) + 'ms');
+    setTimeout(() => screenEl.classList.add('phase-rise'), RISE_AT);
+    setTimeout(() => goToInPlace('page20_reverse_flow.html', { crossfade: 1200 }), NEXT_AT);
+
+    showScreenNotes([
+      { at: 0, text: '입장을 거꾸로 되감듯, 반듯하게 앉은 점술가와 별운관 책상에서 카메라가 뒤로 멀어지기 시작 (처음엔 느리게) · 태블릿: 입력 잠금' },
+      { at: RISE_AT, text: '태블릿: 화면 아래에서 경계가 흐린 어둠이 번지듯 차오르기 시작 (카메라가 빨라지는 만큼 점점 빠르게)' },
+      { at: FASTER_AT, text: '창호지 문을 지나 실내 입장 경로를 거슬러 뒤로 끌려감 (더 빠르게)' },
+      { at: FASTEST_AT, text: '별운관 대문 밖으로 끌려 나옴 (가장 빠르게)' },
+      { at: OUTSIDE_AT, text: '대문 밖 · 태블릿: 어둠이 화면을 다 덮어 책상이 사라지고 연기·은하·파티클만 남음' },
+      { at: NEXT_AT, text: '태블릿 #20으로 이어짐' },
+    ], { total: NEXT_AT });
+  </script>
+</body>
+</html>

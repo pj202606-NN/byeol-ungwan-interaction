@@ -6,63 +6,110 @@
 <link rel="stylesheet" href="css/wireframe.css">
 <link rel="stylesheet" href="css/oracle.css">
 <style>
+  /*
+    스크린: #13의 해석 연출이 마무리되어, 고른 운세에 따라 달라진 별자리 주변의 색·밝기·움직임이 더 선명하게 보이는 루프
+    태블릿: (#13의 별빛이 사라진 책상에서 끊김 없이 이어짐) 해석 결과가 차례로 나타남
+            → 상세 해석 펼쳐보기 → '다른 이야기 듣기'(#12) 또는 '이야기 마치기'(#15)
+  */
+  .result-wrap > * {
+    opacity: 0;
+    transform: translateY(14px);
+    transition: opacity 0.9s ease, transform 0.9s cubic-bezier(.22,.61,.36,1);
+  }
+  .phase-show .result-wrap > * { opacity: 1; transform: translateY(0); }
+  .phase-show .result-wrap > :nth-child(2) { transition-delay: 0.25s; }
+  .phase-show .result-wrap > :nth-child(3),
+  .phase-show .result-wrap > :nth-child(4),
+  .phase-show .result-wrap > :nth-child(5) { transition-delay: 0.5s; }
+  .phase-show .result-wrap > :nth-child(6) { transition-delay: 0.8s; }
+
+  .result-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 2;
+  }
+  /* 바는 두루마리의 축, 상세 해석은 그 축 바로 아래에서 펼쳐지는 종이 */
   .handle-bar {
+    position: relative;
+    z-index: 1;
     width: 720px;
-    height: 8px;
-    border-radius: 6px;
+    height: 28px;
+    border-radius: 14px;
     background: linear-gradient(180deg, #6a6a6a 0%, #9a9a9a 100%);
     cursor: pointer;
-    z-index: 2;
   }
   .chevron-btn {
     margin: 10px 0 28px;
     font-size: 16px;
     color: var(--color-muted);
     cursor: pointer;
-    z-index: 2;
   }
   .detail-card {
-    width: 720px;
+    width: 690px;
     max-height: 0;
     overflow: hidden;
     background: linear-gradient(180deg, #3a3a3a 0%, #8a8a8a 100%);
-    border-radius: 8px;
+    border-radius: 0 0 8px 8px;
     color: #262626;
     font-size: 18px;
+    line-height: 1.8;
+    transition: max-height 0.7s cubic-bezier(.22,.61,.36,1);
+  }
+  /* 3줄이 넘는 상세 해석도 넉넉히 들어가도록 */
+  .detail-card .inner {
+    min-height: 300px;
+    padding: 32px 40px;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: max-height 0.5s cubic-bezier(.22,.61,.36,1);
-    margin-bottom: 28px;
-    z-index: 2;
+    box-sizing: border-box;
   }
   .detail-card.open {
-    max-height: 260px;
+    max-height: 460px;
   }
 </style>
 </head>
 <body>
   <script src="js/fit-screen.js"></script>
   <script src="js/nav.js"></script>
-  <div class="screen bg-room">
-    <div class="title" style="font-size:30px; font-family:'KoPub Batang Medium', 'Malgun Gothic', sans-serif;">올해의 관계운</div>
-    <div class="subtitle" style="max-width:1100px; z-index:2; font-family:'KoPub Batang Medium', 'Malgun Gothic', sans-serif;">
-      올해는 새로운 인연과 기회가 찾아오는 해입니다.<br>
-      다만 급한 결정은 피하고 신중하게 접근하는 것이 좋겠습니다.
-    </div>
-
-    <div class="handle-bar" id="handleBar" onclick="toggleDetail()"></div>
-    <div class="detail-card" id="detailCard">상세 해석</div>
-    <div class="chevron-btn" id="chevron" onclick="toggleDetail()">⌄</div>
-
-    <div style="display:flex; gap:40px; margin-top:56px; z-index:2;">
-      <button class="btn" onclick="goTo('page13_keyword_select.html')">다른 이야기 듣기</button>
-      <button class="btn" onclick="goTo('page15_dashboard.html')">이야기 마치기</button>
+  <script src="js/ambient.js"></script>
+  <div class="screen bg-room" id="screen">
+    <div class="result-wrap">
+      <div class="title" id="resultTitle" style="font-size:30px; font-family:'KoPub Batang Medium', 'Malgun Gothic', sans-serif;">올해의 관계운</div>
+      <div class="subtitle" style="max-width:1100px; text-align:center; font-family:'KoPub Batang Medium', 'Malgun Gothic', sans-serif;">
+        올해는 새로운 인연과 기회가 찾아오는 해입니다.<br>
+        다만 급한 결정은 피하고 신중하게 접근하는 것이 좋겠습니다.
+      </div>
+      <div class="handle-bar" id="handleBar"></div>
+      <div class="detail-card" id="detailCard"><div class="inner">상세 해석</div></div>
+      <div class="chevron-btn" id="chevron">⌄</div>
+      <div style="display:flex; gap:40px; margin-top:56px;">
+        <button class="btn" id="otherBtn">다른 이야기 듣기</button>
+        <button class="btn" id="finishBtn">이야기 마치기</button>
+      </div>
     </div>
     <div class="page-index">#14 page14_interpretation</div>
   </div>
 
   <script>
+    // 타이밍 (단위: ms)
+    const SHOW_AT = 300;       // #13에서 이어진 뒤 결과가 나타나기 시작
+    const UNLOCK_AT = 2000;    // 결과와 버튼이 다 나타난 뒤 입력 허용
+
+    // #11·#12에서 고른 시기·주제로 제목을 만든다 (예: 올해의 관계운). 실제 해석 문장은 운세 데이터가 붙으면 교체
+    const PERIOD_LABEL = { today: '오늘의', month: '이달의', year: '올해의' };
+    try {
+      const period = PERIOD_LABEL[sessionStorage.getItem('fortunePeriod')];
+      const topic = sessionStorage.getItem('fortuneTopic');
+      if (period && topic) document.getElementById('resultTitle').textContent = `${period} ${topic}운`;
+    } catch (e) {}
+
+    lockInput();
+    const screenEl = document.getElementById('screen');
+    setTimeout(() => screenEl.classList.add('phase-show'), SHOW_AT);
+    setTimeout(unlockInput, UNLOCK_AT);
+
     function toggleDetail() {
       const card = document.getElementById('detailCard');
       const chevron = document.getElementById('chevron');
@@ -70,6 +117,21 @@
       card.classList.toggle('open', open);
       chevron.textContent = open ? '⌃' : '⌄';
     }
+    document.getElementById('handleBar').addEventListener('click', toggleDetail);
+    document.getElementById('chevron').addEventListener('click', toggleDetail);
+    document.getElementById('otherBtn').addEventListener('click', () => { lockInput(); goTo('page12_keyword_select.html'); });
+    // 이야기 마치기: 화면 위 요소가 스르륵 사라지고, 같은 책상 그대로 #15로 끊김 없이 이어진다
+    const FINISH_FADE_MS = 900;
+    document.getElementById('finishBtn').addEventListener('click', () => {
+      lockInput();
+      screenEl.classList.remove('phase-show');
+      setTimeout(() => goToInPlace('page15_dashboard.html'), FINISH_FADE_MS);
+    });
+
+    showScreenNotes([
+      { at: 0, text: '해석 완료: 관람객이 고른 운세(시기·주제)에 따라 달라진 별자리 주변의 색·밝기·움직임이 #13보다 더 선명하게 보임 · 태블릿: 해석 결과가 차례로 나타남' },
+      { at: UNLOCK_AT, text: '같은 선명한 상태로 루프. 관람객이 상세 해석을 보고 버튼을 누를 때까지 반복 ("다른 이야기 듣기" → #12, "이야기 마치기" → #15)' },
+    ], { total: UNLOCK_AT, waitInput: true });
   </script>
 </body>
 </html>

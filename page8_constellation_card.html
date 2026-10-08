@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>별운관 체험 - #8 별자리 카드</title>
+<link rel="stylesheet" href="css/wireframe.css">
+<link rel="stylesheet" href="css/oracle.css">
+<style>
+  /*
+    스크린: 점술가가 손바닥 사이를 벌리고 카메라가 손 쪽으로 다가감 → 별들이 이어져 별자리 + 동물 그래픽 완성
+            → 그 자리에 타로카드 같은 별자리 카드가 생겨 아래(태블릿)로 내려감 → 손 안의 별자리 반복 영상 → 점술가 대사
+    태블릿: #7에서 모였던 별빛이 느리게 퍼지며 흐려져 사라짐 → 위에서 카드가 내려옴
+            → 살짝 어두워지며 대사 자막 → 다시 밝아지며 '나의 별자리 확인하기' 버튼 활성화
+    #7의 마지막 화면(가운데 한 점으로 모인 별빛)에서 끊김 없이 이어지도록, 시작 상태를 #7의 끝 상태와 맞춰 두었다.
+  */
+  .room-shade { opacity: 0.3; transition: opacity 4s ease-in-out; }
+  .phase-clear .room-shade { opacity: 0; }
+  .phase-talk .room-shade { opacity: 0.5; transition-duration: 1.2s; }
+  .phase-ready .room-shade { opacity: 0; transition-duration: 1.5s; }
+
+  .star-field {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 0;
+    height: 0;
+    z-index: 2;
+  }
+  .search-star {
+    position: absolute;
+    border-radius: 50%;
+    background: #fff6dc;
+    box-shadow: 0 0 6px 2px rgba(255, 230, 170, 0.55), 0 0 18px 6px rgba(255, 220, 150, 0.18);
+    will-change: transform, opacity;
+  }
+  /* 빛무리: #7 끝의 밝은 상태에서 시작해 넓게 번지며 흐려진다 */
+  .core-glow {
+    position: absolute;
+    left: -160px;
+    top: -160px;
+    width: 320px;
+    height: 320px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 235, 190, 0.35) 0%, rgba(255, 210, 150, 0.1) 35%, rgba(0, 0, 0, 0) 70%);
+    opacity: 1;
+    transform: scale(1.3);
+    transition: opacity 3.5s ease-out, transform 3.5s ease-out;
+  }
+  .phase-clear .core-glow { opacity: 0; transform: scale(2.4); }
+
+  .card-stack {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  /* 카드는 내려올 차례가 되기 전까지 숨겨 둔다 */
+  #card { visibility: hidden; }
+  #card.card-drop { visibility: visible; }
+
+  .guide-subtitle {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 120px;
+    margin: 0 auto;
+    z-index: 3;
+  }
+</style>
+</head>
+<body>
+  <script src="js/fit-screen.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/ambient.js"></script>
+  <script src="js/subtitles.js"></script>
+  <div class="screen bg-room" id="screen">
+    <div class="room-shade"></div>
+    <div class="star-field" id="field">
+      <div class="core-glow"></div>
+    </div>
+    <div class="card-stack">
+      <div class="card-object" id="card" style="width:340px; height:480px; margin-bottom:56px;"></div>
+      <button class="btn reveal-btn" id="checkBtn">나의 별자리 확인하기</button>
+    </div>
+    <div class="guide-subtitle" id="subtitle"></div>
+    <div class="page-index">#8 page8_constellation_card</div>
+  </div>
+
+  <script>
+    // 타이밍 (단위: ms) - 스크린 영상이 나오면 이 값들만 영상에 맞추면 된다.
+    const DISPERSE_MS = 6000;     // 모였던 별빛이 퍼지며 사라지는 시간 (손이 벌어지고 클로즈업되는 동안)
+    const LINK_AT = 1500;         // 스크린: 별들이 이어져 별자리가 되기 시작
+    const ANIMAL_AT = 4000;       // 스크린: 동물 그래픽이 그려지기 시작
+    const SHOWCASE_AT = 6500;     // 스크린: 완성된 별자리 + 동물을 보여주는 구간
+    const CARD_FORM_AT = 9000;    // 스크린: 별자리 자리에 카드가 생겨남
+    const CARD_DESCEND_AT = 10300; // 스크린: 카드가 아래로 내려가기 시작
+    const CARD_DROP_AT = 11500;   // 태블릿: 위에서 카드가 내려옴 (스크린에서 카드가 화면 아래로 빠져나가는 순간)
+    const CARD_DROP_MS = 1200;    // 카드가 내려오는 애니메이션 길이 (oracle.css cardDrop)
+    const TALK_DELAY = 800;       // 카드가 내려온 뒤 대사가 시작되기까지
+    const READY_DELAY = 300;      // 대사가 끝난 뒤 버튼이 뜨기까지
+
+    // 점술가 대사 (임시 문구 - 실제 대본이 나오면 교체)
+    const LINES = [
+      { text: '당신의 별이 무엇인지 살펴보시겠습니까?', hold: 3200, gap: 0 },
+    ];
+
+    lockInput();
+    const screenEl = document.getElementById('screen');
+    const field = document.getElementById('field');
+    const card = document.getElementById('card');
+    const btn = document.getElementById('checkBtn');
+    const subtitle = document.getElementById('subtitle');
+    const rand = (min, max) => min + Math.random() * (max - min);
+    const easeOut = (p) => 1 - Math.pow(1 - p, 3);
+
+    // #7 끝에서 가운데 한 점에 모여 있던 별빛을 다시 만들어, 느리게 바깥으로 퍼뜨리며 흐리게 사라지게 한다
+    const stars = [];
+    for (let i = 0; i < 18; i++) {
+      const el = document.createElement('div');
+      el.className = 'search-star';
+      const size = rand(3, 7);
+      el.style.width = el.style.height = size + 'px';
+      el.style.margin = -size / 2 + 'px 0 0 ' + -size / 2 + 'px';
+      el.style.opacity = 0.3;
+      field.appendChild(el);
+      stars.push({ el, angle: rand(0, Math.PI * 2), dist: rand(650, 1100), peak: rand(0.6, 1), spin: rand(-0.4, 0.4) });
+    }
+    const t0 = performance.now();
+    function frame(now) {
+      const p = Math.min(1, (now - t0) / DISPERSE_MS);
+      const r = easeOut(p);
+      stars.forEach((s) => {
+        const a = s.angle + s.spin * p;
+        const d = s.dist * r;
+        // 잠깐 밝아졌다가(퍼지기 시작) 서서히 흐려진다
+        const op = p < 0.15 ? 0.3 + (s.peak - 0.3) * (p / 0.15) : s.peak * (1 - (p - 0.15) / 0.85);
+        s.el.style.transform = `translate(${Math.cos(a) * d}px, ${Math.sin(a) * d * 0.82}px)`;
+        s.el.style.opacity = Math.max(0, op);
+        s.el.style.filter = `blur(${p * 3}px)`;
+      });
+      if (p < 1) requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    async function play() {
+      await wait(50);
+      screenEl.classList.add('phase-clear');
+      await wait(CARD_DROP_AT - 50);
+      card.classList.add('card-drop');
+      await wait(CARD_DROP_MS + TALK_DELAY);
+      screenEl.classList.add('phase-talk');
+      await playSubtitles(subtitle, LINES);
+      await wait(READY_DELAY);
+      screenEl.classList.remove('phase-talk');
+      screenEl.classList.add('phase-ready');
+      btn.classList.add('revealed');
+      unlockInput();
+    }
+
+    // 버튼은 스르륵 사라지고, 같은 책상·같은 카드 그대로 #9로 끊김 없이 이어진다
+    btn.addEventListener('click', () => {
+      btn.disabled = true;
+      btn.classList.remove('revealed');
+      lockInput();
+      setTimeout(() => goToInPlace('page9_constellation_info.html'), 1000);
+    });
+
+    const talkAt = CARD_DROP_AT + CARD_DROP_MS + TALK_DELAY;
+    const schedule = subtitleSchedule(LINES, talkAt);
+    const readyAt = schedule.end + READY_DELAY;
+    showScreenNotes([
+      { at: 0, text: '점술가가 두 손바닥 사이를 바깥으로 벌리기 시작하고, 카메라가 손 쪽으로 다가감 (클로즈업, 초근접은 아님) · 태블릿: 모였던 별빛이 느리게 퍼지며 흐려져 사라짐' },
+      { at: LINK_AT, text: '손 사이의 별들이 살짝 더 퍼지며 선으로 이어져 별자리가 됨' },
+      { at: ANIMAL_AT, text: '별자리에 맞는 동물 그래픽이 그려지며 완성됨' },
+      { at: SHOWCASE_AT, text: '완성된 별자리와 동물 그래픽을 보여주는 구간' },
+      { at: CARD_FORM_AT, text: '손바닥 사이, 별자리가 있던 자리에 타로카드 같은 별자리 카드가 생겨남' },
+      { at: CARD_DESCEND_AT, text: '카드가 아래(태블릿 쪽)로 내려감' },
+      { at: CARD_DROP_AT, text: '카드가 화면 아래로 빠져나감 → 이후 손 안의 별자리 그래픽이 살짝씩 움직이는 반복 영상 · 태블릿: 위에서 카드가 내려옴' },
+      ...lineNotes(LINES, schedule, '점술가').map((n) => ({ at: n.at, text: n.text + ' · 태블릿: 살짝 어두워지고 자막' })),
+      { at: readyAt, text: '별자리 반복 영상 유지, 관람객 입력 대기 · 태블릿: 다시 밝아지며 "나의 별자리 확인하기" 버튼 활성화' },
+    ], { total: readyAt, waitInput: true });
+
+    play();
+  </script>
+</body>
+</html>

@@ -1,5 +1,5 @@
 /*
-  '28수' 체험 본 흐름(#1~#19) 전용 스타일.
+  '28수' 체험 본 흐름(#1~#18) 전용 스타일.
   wireframe.css의 --screen-width/height, .screen, .page-index, fit-screen.js는
   그대로 재사용하고, 여기서는 이 흐름에서만 쓰이는 배경/컴포넌트만 정의한다.
 */
@@ -475,6 +475,8 @@
   opacity: 0;
   filter: blur(6px);
   transition: opacity 1.4s ease, filter 1.4s ease;
+  /* 자막은 보기만 하는 요소. 투명할 때도 아래 버튼의 터치를 가로채지 않도록 */
+  pointer-events: none;
 }
 .guide-subtitle.show {
   opacity: 1;
@@ -488,7 +490,18 @@
   background: #000;
   opacity: 1;
   z-index: 1;
+  pointer-events: none;
   transition: opacity 2.5s ease-in-out;
 }
 .phase-desk .room-shade { opacity: 0.62; }
 .phase-bright .room-shade { opacity: 0; transition-duration: 2.2s; }
+
+/* 카드가 위로(스크린 속 점술가에게) 올라가는 연출 (.card-drop의 반대) */
+.card-rise {
+  animation: cardRise 1.3s cubic-bezier(.55,0,.75,.2) both;
+}
+@keyframes cardRise {
+  from { transform: translateY(0); opacity: 1; }
+  70% { opacity: 1; }
+  to { transform: translateY(-760px); opacity: 0; }
+}

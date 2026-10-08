@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>별운관 체험 - #10 별이 가져온 이야기</title>
+<link rel="stylesheet" href="css/wireframe.css">
+<link rel="stylesheet" href="css/oracle.css">
+<style>
+  /*
+    스크린: (#9에서 '다음' 직후) 카메라가 밤하늘에서 살짝 뒤로 빠지고, 흩어졌던 점술가가 다시 합쳐져 반듯하게 앉음
+            → 화면 아래에서 카드가 올라와 점술가의 손으로 → 한쪽 손바닥 위에 카드를 똑바로 세움 → 대사
+    태블릿: (#9에서 정보가 사라지고 카드가 가운데로 돌아온 상태에서 끊김 없이 이어짐)
+            → 카드가 화면 위로 올라감 → 살짝 어두워지며 대사 자막 → 어두운 채 '별이 가져온 이야기 듣기' 버튼 활성화
+  */
+  .room-shade { opacity: 0; transition: opacity 1.2s ease-in-out; }
+  .phase-dim .room-shade { opacity: 0.5; }
+
+  /* #9에서 가운데로 돌아온 카드와 같은 위치 */
+  .card-object.info-card {
+    position: absolute;
+    left: 790px;
+    top: 242px;
+    width: 340px;
+    height: 480px;
+  }
+
+  .guide-subtitle {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    margin: 0 auto;
+    transform: translateY(-50%);
+    z-index: 3;
+  }
+  #storyBtn { z-index: 2; }
+</style>
+</head>
+<body>
+  <script src="js/fit-screen.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/ambient.js"></script>
+  <script src="js/subtitles.js"></script>
+  <div class="screen bg-room" id="screen">
+    <div class="room-shade"></div>
+    <div class="card-object info-card" id="card"></div>
+    <button class="btn reveal-btn" id="storyBtn">별이 가져온 이야기 듣기</button>
+    <div class="guide-subtitle" id="subtitle"></div>
+    <div class="page-index">#10 page10_star_story</div>
+  </div>
+
+  <script>
+    // 타이밍 (단위: ms) - 스크린 영상이 나오면 이 값들만 영상에 맞추면 된다.
+    const SETTLE_AT = 3500;   // 스크린: 카메라가 뒤로 빠지고 점술가가 다시 합쳐지는 연출이 끝나고, 반듯하게 앉은 모습 (#9의 '다음' 직후부터 약 5초)
+    const RISE_AT = 6000;     // 반듯하게 앉은 모습을 잠시 보여준 뒤, 태블릿 카드가 위로 올라가기 시작 (= 스크린 아래에서 카드가 올라오기 시작)
+    const RISE_MS = 1300;     // 카드가 올라가는 애니메이션 길이 (oracle.css cardRise)
+    const PLACE_MS = 1500;    // 스크린: 카드를 받아 한쪽 손바닥 위에 똑바로 세우는 시간
+    const READY_DELAY = 300;  // 대사가 끝난 뒤 버튼이 뜨기까지
+
+    // 점술가 대사 (임시 문구 - 실제 대본이 나오면 교체)
+    const LINES = [
+      { text: '당신의 별은 선명하게 보이는군요.', hold: 3200, gap: 800 },
+      { text: '이제 그 별이 가져온 이야기를 들어보시겠어요?', hold: 3800, gap: 0 },
+    ];
+
+    lockInput();
+    const screenEl = document.getElementById('screen');
+    const card = document.getElementById('card');
+    const btn = document.getElementById('storyBtn');
+    const subtitle = document.getElementById('subtitle');
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+    const talkAt = RISE_AT + RISE_MS + PLACE_MS;
+    async function play() {
+      await wait(RISE_AT);
+      card.classList.add('card-rise');
+      await wait(RISE_MS + PLACE_MS);
+      screenEl.classList.add('phase-dim');
+      await playSubtitles(subtitle, LINES);
+      await wait(READY_DELAY);
+      // 어두운 책상 화면 그대로 버튼만 활성화
+      btn.classList.add('revealed');
+      unlockInput();
+    }
+
+    // 버튼은 스르륵 사라지고, 같은 (어두운) 책상 그대로 #11로 끊김 없이 이어진다
+    btn.addEventListener('click', () => {
+      btn.disabled = true;
+      btn.classList.remove('revealed');
+      lockInput();
+      setTimeout(() => goToInPlace('page11_fortune_select.html'), 900);
+    });
+
+    const schedule = subtitleSchedule(LINES, talkAt);
+    const readyAt = schedule.end + READY_DELAY;
+    showScreenNotes([
+      { at: -1500, text: '(#9에서 "다음" 직후) 밤하늘에 초점을 맞췄던 카메라가 살짝 뒤로 빠지고, 좌우로 흩어졌던 안개 점술가가 다시 합쳐져 뚜렷해짐 · 태블릿: 정보가 사라지고 카드가 가운데로 돌아옴' },
+      { at: SETTLE_AT, text: '점술가가 다시 반듯하게 앉은 모습 (잠시 머무름)' },
+      { at: RISE_AT, text: '화면 아래에서 카드가 올라옴 · 태블릿: 카드가 화면 위로 올라감' },
+      { at: RISE_AT + RISE_MS, text: '카드가 점술가의 손에 들어감. 한쪽 손바닥 위에 카드를 똑바로 세워 올림 (납작하게 붙지 않고 서 있는, 신비로운 느낌)' },
+      ...lineNotes(LINES, schedule, '점술가').map((n, i) => (i === 0 ? { at: n.at, text: n.text + ' · 태블릿: 살짝 어두워지고 자막' } : n)),
+      { at: readyAt, text: '카드를 손 위에 세운 채 대기 루프. 관람객이 버튼을 누를 때까지 반복 (누르면 #11로) · 태블릿: 어두운 책상 그대로 "별이 가져온 이야기 듣기" 버튼 활성화' },
+    ], { total: readyAt, waitInput: true });
+
+    play();
+  </script>
+</body>
+</html>

@@ -15,7 +15,7 @@
   .click-hint {
     position: absolute;
     top: 50%;
-    left: 0;
+    left: 50%;
     width: 32px;
     height: 32px;
     margin: -16px 0 0 -16px;
@@ -49,9 +49,27 @@
   .door-caption span.show {
     opacity: 1;
   }
-  /* #19에서 돌아올 때는 검은 화면에서 천천히 밝아지도록 */
-  body.from-end {
-    animation-duration: 2s;
+  /* #22에서 돌아올 때(?reveal): 시야가 내려오듯 문 화면이 아래에서 떠오르며, 검은 화면에서 천천히 밝아진다 */
+  @keyframes tiltIn {
+    from { transform: translateY(260px); }
+    to { transform: translateY(0); }
+  }
+  @keyframes revealFromDark {
+    from { opacity: 1; }
+    to { opacity: 0; }
+  }
+  .tilt-in .door,
+  .tilt-in .door-caption {
+    animation: tiltIn 2.4s cubic-bezier(.22,.61,.36,1) both;
+  }
+  .tilt-in::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: #000;
+    pointer-events: none;
+    z-index: 5;
+    animation: revealFromDark 2.4s ease-out both;
   }
 </style>
 </head>
@@ -71,10 +89,12 @@
   </div>
 
   <script>
-    if (location.search.includes('from=end')) document.body.classList.add('from-end');
+    if (/[?&]reveal\b/.test(location.search)) document.getElementById('screen').classList.add('tilt-in');
+    // #22에서 같은 문서로 이어져 온 경우 입력 잠금이 남아 있으므로 푼다
+    if (typeof unlockInput === 'function') unlockInput();
 
     showScreenNotes([
-      { at: 0, text: '대기 상태 (연출 미정). 관람객이 문을 누르면 #2의 연출이 시작됨' },
+      { at: 0, text: '루프 영상: 태블릿의 문과 같은 공간, 문 위로 펼쳐진 밤하늘. 별들이 회전하며 원형 궤적(일주운동처럼 여러 겹의 원형 선)을 그려 나감. 관람객이 문을 터치할 때까지 반복 → 터치하면 #2의 연출 시작' },
     ]);
 
     document.getElementById('door').addEventListener('click', () => {

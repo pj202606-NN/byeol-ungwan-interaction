@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>별운관 체험 - #7 별자리 탐색</title>
+<link rel="stylesheet" href="css/wireframe.css">
+<link rel="stylesheet" href="css/oracle.css">
+<style>
+  /*
+    스크린: 아래에서 종이가 올라옴 → 점술가가 종이를 받아듦 → 종이를 내려둠 → 손 사이에 별빛이 모이며 별자리 탐색(루프) → 별자리를 찾음
+    태블릿: 책상 가운데에 작은 별빛이 모여 빙글빙글 돌며 모였다 퍼졌다 하는 로딩 루프 → 한 점으로 모여 빛남 → 다음 장면
+    입력은 받지 않는다. 생년월일시로 별자리를 찾는 실제 처리는 금방 끝나도, 연출은 최소 시간(SEARCH_MIN)만큼 보여준다.
+  */
+  .room-shade { opacity: 0; transition: opacity 2s ease-in-out; }
+  .phase-search .room-shade { opacity: 0.45; }
+  .phase-found .room-shade { opacity: 0.3; }
+
+  .star-field {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 0;
+    height: 0;
+    z-index: 2;
+  }
+  .search-star {
+    position: absolute;
+    border-radius: 50%;
+    background: #fff6dc;
+    box-shadow: 0 0 6px 2px rgba(255, 230, 170, 0.55), 0 0 18px 6px rgba(255, 220, 150, 0.18);
+    opacity: 0;
+    will-change: transform, opacity;
+  }
+  .core-glow {
+    position: absolute;
+    left: -160px;
+    top: -160px;
+    width: 320px;
+    height: 320px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 235, 190, 0.35) 0%, rgba(255, 210, 150, 0.1) 35%, rgba(0, 0, 0, 0) 70%);
+    opacity: 0;
+    transform: scale(0.6);
+    transition: opacity 1.6s ease, transform 1.6s ease;
+  }
+  .phase-search .core-glow { opacity: 0.45; transform: scale(0.8); }
+  .phase-found .core-glow { opacity: 1; transform: scale(1.3); transition-duration: 0.9s; }
+</style>
+</head>
+<body>
+  <script src="js/fit-screen.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/ambient.js"></script>
+  <div class="screen bg-room" id="screen">
+    <div class="room-shade"></div>
+    <div class="star-field" id="field">
+      <div class="core-glow"></div>
+    </div>
+    <div class="page-index">#7 page7_star_search</div>
+  </div>
+
+  <script>
+    // 타이밍 (단위: ms) - 스크린 영상이 나오면 이 값들만 영상에 맞추면 된다.
+    const PUT_DOWN_AT = 1500;   // 점술가가 받아든 종이를 내려둠
+    const GATHER_AT = 2700;     // 별빛이 모이기 시작 (종이를 내려둔 뒤)
+    const GATHER_MS = 2500;     // 흩어진 별빛이 가운데로 모이는 시간
+    const SEARCH_MIN = 12700;   // 이 시점 전에는 별자리를 찾았더라도 탐색 루프를 계속 보여준다
+    const FOUND_MS = 1600;      // 별빛이 한 점으로 모여 빛나는 시간
+    const END_HOLD = 400;       // 빛난 뒤 다음 장면(#8)으로 넘어가기 전 여운. #8은 이 상태에서 끊김 없이 이어진다
+
+    // 관람객이 #6에서 입력한 생년월일시
+    let birth = null;
+    try { birth = JSON.parse(sessionStorage.getItem('birth')); } catch (e) {}
+
+    // 임시 구현: 실제 별자리 데이터 조회로 바뀔 자리. 결과는 다음 장면에서 쓰도록 저장해 둔다.
+    function findConstellation(b) {
+      return new Promise((resolve) => setTimeout(() => resolve({ birth: b, constellation: null }), 300));
+    }
+
+    lockInput();
+    const screenEl = document.getElementById('screen');
+    const field = document.getElementById('field');
+    const rand = (min, max) => min + Math.random() * (max - min);
+    const ease = (p) => (p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2);
+
+    const STAR_COUNT = 18;
+    const stars = [];
+    for (let i = 0; i < STAR_COUNT; i++) {
+      const el = document.createElement('div');
+      el.className = 'search-star';
+      const size = rand(3, 7);
+      el.style.width = el.style.height = size + 'px';
+      el.style.margin = -size / 2 + 'px 0 0 ' + -size / 2 + 'px';
+      field.appendChild(el);
+      stars.push({
+        el,
+        angle: (i / STAR_COUNT) * Math.PI * 2 + rand(-0.2, 0.2),
+        spread: rand(0.75, 1.25),     // 별마다 궤도 반지름 차이
+        speed: rand(0.8, 1.3),        // 별마다 회전 속도 차이
+        phase: rand(0, Math.PI * 2),
+        startR: rand(380, 620),       // 모이기 전 흩어져 있던 거리
+        peak: rand(0.6, 1),
+      });
+    }
+
+    // 상태: wait → gather → search(루프) → found → done
+    let mode = 'wait';
+    let modeStart = 0;
+    let lastR = stars.map(() => 0);
+    const t0 = performance.now();
+    function setMode(m) { mode = m; modeStart = performance.now(); }
+
+    function frame(now) {
+      const t = now - t0;
+      const mt = now - modeStart;
+      stars.forEach((s, i) => {
+        // 탐색 루프: 회전하면서 반지름이 천천히 모였다 퍼졌다 한다
+        const breathe = 90 + 40 * Math.sin(t * 0.0011 + s.phase * 0.3);
+        const loopR = breathe * s.spread;
+        const a = s.angle + t * 0.0007 * s.speed;
+        let r, op;
+        if (mode === 'wait') { r = s.startR; op = 0; }
+        else if (mode === 'gather') {
+          const p = ease(Math.min(1, mt / GATHER_MS));
+          r = s.startR + (loopR - s.startR) * p;
+          op = s.peak * p;
+        } else if (mode === 'search') {
+          r = loopR;
+          op = s.peak * (0.7 + 0.3 * Math.sin(t * 0.004 + s.phase));
+        } else {
+          const p = ease(Math.min(1, mt / FOUND_MS));
+          r = lastR[i] * (1 - p);
+          op = s.peak * (1 - p * 0.6);
+        }
+        if (mode !== 'found' && mode !== 'done') lastR[i] = r;
+        s.el.style.transform = `translate(${Math.cos(a) * r}px, ${Math.sin(a) * r * 0.82}px)`;
+        s.el.style.opacity = op;
+      });
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    async function play() {
+      const lookup = findConstellation(birth).then((result) => {
+        try { sessionStorage.setItem('constellationResult', JSON.stringify(result)); } catch (e) {}
+      });
+      await wait(GATHER_AT);
+      screenEl.classList.add('phase-search');
+      setMode('gather');
+      await wait(GATHER_MS);
+      setMode('search');
+      // 조회가 끝나고, 최소 연출 시간도 지나야 '찾음'으로 넘어간다
+      await Promise.all([lookup, wait(SEARCH_MIN - GATHER_AT - GATHER_MS)]);
+      screenEl.classList.remove('phase-search');
+      screenEl.classList.add('phase-found');
+      setMode('found');
+      await wait(FOUND_MS + END_HOLD);
+      goToInPlace('page8_constellation_card.html');
+    }
+
+    showScreenNotes([
+      { at: -900, text: '(#6에서 "건넨다." 직후) 태블릿 종이가 올라가는 0.9초에 맞춰, 스크린 아래에서 종이가 올라옴' },
+      { at: 0, text: '점술가가 올라온 종이를 손으로 받아듦' },
+      { at: PUT_DOWN_AT, text: '점술가가 받아든 종이를 내려둠' },
+      { at: GATHER_AT, text: '점술가의 손 사이로 별빛이 모여들기 시작 · 태블릿: 책상 가운데로 별빛이 모임' },
+      { at: GATHER_AT + GATHER_MS, text: '입력한 생년월일시로 별자리를 탐색하는 연출 (별빛이 손 사이에서 돌고, 모였다 퍼졌다 반복하는 루프)' },
+      { at: SEARCH_MIN, text: '관람객의 별자리를 찾아냄: 별빛이 한 점으로 모이며 빛남' },
+      { at: SEARCH_MIN + FOUND_MS + END_HOLD, text: '태블릿 #8로 끊김 없이 이어짐' },
+    ], { total: SEARCH_MIN + FOUND_MS + END_HOLD });
+
+    play();
+  </script>
+</body>
+</html>

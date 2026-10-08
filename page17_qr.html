@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>별운관 체험 - #17 QR 코드</title>
+<link rel="stylesheet" href="css/wireframe.css">
+<link rel="stylesheet" href="css/oracle.css">
+<style>
+  /*
+    스크린: #16 마지막과 같은 작별 대기 루프 ('떠나기'를 누를 때까지)
+    태블릿: (#16의 책상·카드에서 끊김 없이 이어짐) 가운데 카드가 뒤집히며 QR 코드 면이 나타남
+            → 안내 문장과 '떠나기' 버튼 → #18
+  */
+  /* #16의 카드와 같은 자리·같은 크기 (가운데, 아래 버튼만큼 위로 올라간 자리) */
+  .flip-card {
+    position: absolute;
+    left: 790px;
+    top: 242px;
+    width: 340px;
+    height: 480px;
+    perspective: 1800px;
+    z-index: 2;
+  }
+  .flip-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transform-style: preserve-3d;
+    transition: transform 1.3s cubic-bezier(.45,.05,.2,1);
+  }
+  .phase-flip .flip-inner { transform: rotateY(180deg); }
+  .flip-face {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+  .flip-back { transform: rotateY(180deg); }
+  .flip-back .qr-box {
+    width: 240px;
+    height: 240px;
+    background: #1a1a1a;
+    color: var(--color-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+  }
+
+  .qr-caption {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 170px;
+    margin: 0;
+    text-align: center;
+    z-index: 2;
+  }
+  .qr-caption,
+  #leaveBtn {
+    opacity: 0;
+    transition: opacity 1s ease;
+  }
+  #leaveBtn {
+    position: absolute;
+    left: 50%;
+    top: 778px;   /* #16의 버튼 자리 */
+    transform: translateX(-50%);
+    z-index: 2;
+    pointer-events: none;
+  }
+  .phase-ready .qr-caption,
+  .phase-ready #leaveBtn { opacity: 1; }
+  .phase-ready #leaveBtn { pointer-events: auto; transition-delay: 0.3s; }
+</style>
+</head>
+<body>
+  <script src="js/fit-screen.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/ambient.js"></script>
+  <div class="screen bg-room" id="screen">
+    <div class="subtitle qr-caption">운세 결과를 간직하려면 QR코드를 스캔하세요.</div>
+    <div class="flip-card">
+      <div class="flip-inner">
+        <div class="card-object flip-face flip-front"></div>
+        <div class="card-object flip-face flip-back"><div class="qr-box">QR코드 이미지</div></div>
+      </div>
+    </div>
+    <button class="btn" id="leaveBtn">떠나기</button>
+    <div class="page-index">#17 page17_qr</div>
+  </div>
+
+  <script>
+    // 타이밍 (단위: ms)
+    const FLIP_AT = 500;      // #16에서 이어진 뒤 카드가 뒤집히기 시작
+    const FLIP_MS = 1300;     // 뒤집히는 시간 (.flip-inner transition)
+    const READY_AT = FLIP_AT + FLIP_MS + 200;  // 안내 문장과 '떠나기' 버튼 등장
+    const UNLOCK_AT = READY_AT + 1000;
+
+    lockInput();
+    const screenEl = document.getElementById('screen');
+    setTimeout(() => screenEl.classList.add('phase-flip'), FLIP_AT);
+    setTimeout(() => screenEl.classList.add('phase-ready'), READY_AT);
+    setTimeout(unlockInput, UNLOCK_AT);
+
+    // 떠나기: 문장과 버튼이 스르륵 사라지고, 같은 책상·카드 그대로 #18로 끊김 없이 이어진다
+    document.getElementById('leaveBtn').addEventListener('click', (e) => {
+      e.currentTarget.disabled = true;
+      lockInput();
+      screenEl.classList.remove('phase-ready');
+      setTimeout(() => goToInPlace('page18_farewell.html'), 1000);
+    });
+
+    showScreenNotes([
+      { at: 0, text: '#16 마지막과 같은 작별 대기 루프가 이어짐 · 태블릿: 가운데 카드가 뒤집히며 QR 코드 면이 나타남' },
+      { at: UNLOCK_AT, text: '같은 대기 루프. 관람객이 QR을 스캔하고 "떠나기"를 누를 때까지 반복 (누르면 #18로) · 태블릿: 안내 문장과 "떠나기" 버튼' },
+    ], { total: UNLOCK_AT, waitInput: true });
+  </script>
+</body>
+</html>

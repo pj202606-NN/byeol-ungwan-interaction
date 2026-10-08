@@ -1,0 +1,9 @@
+<!DOCTYPE html>
+<meta charset="UTF-8">
+<title>별운관 체험</title>
+<script>
+var pages = {"1":"page1_door.html","2":"page2_transition.html","3":"page3_guide_intro.html","4":"page4_smoke_gate.html","5":"page5_oracle_room.html","6":"page6_birth_paper.html","7":"page7_star_search.html","8":"page8_constellation_card.html","9":"page9_constellation_info.html","10":"page10_star_story.html","11":"page11_fortune_select.html","12":"page12_keyword_select.html","13":"page13_fortune_reading.html","14":"page14_interpretation.html","15":"page15_dashboard.html","16":"page16_gift_card.html","17":"page17_qr.html","18":"page18_farewell.html","19":"page19_pullback.html","20":"page20_reverse_flow.html","21":"page21_door_exit.html","22":"page22_door_close.html"};
+var m = /\/page(\d+)_[^/]*$/.exec(location.pathname);
+var base = location.pathname.replace(/[^/]*$/, '');
+location.replace(base + ((m && pages[m[1]]) || 'page1_door.html'));
+</script>

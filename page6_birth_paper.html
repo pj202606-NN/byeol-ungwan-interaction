@@ -127,11 +127,19 @@
       unlockInput();
     }
 
+    // 건넨다: 버튼은 스르륵 사라지고 종이는 위로(스크린 속 점술가에게) 올라간다.
+    // 다음 장면(#7)도 같은 책상 화면이므로 끊김 없이 이어 붙인다.
     function submitBirth() {
-      document.getElementById('submitBtn').disabled = true;
+      const btn = document.getElementById('submitBtn');
+      btn.disabled = true;
+      btn.classList.remove('revealed');
+      lockInput();
+      const birth = {};
+      ['year', 'month', 'day', 'hour'].forEach((k) => { birth[k] = Number(document.getElementById(k).dataset.value); });
+      try { sessionStorage.setItem('birth', JSON.stringify(birth)); } catch (e) {}
       panel.classList.remove('paper-drop');
       panel.classList.add('paper-rise');
-      setTimeout(() => goTo('page7_birthinput.html'), 800);
+      setTimeout(() => goToInPlace('page7_star_search.html'), 900);
     }
 
     document.getElementById('submitBtn').addEventListener('click', submitBirth);

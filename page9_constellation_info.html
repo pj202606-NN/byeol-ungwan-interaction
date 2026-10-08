@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>별운관 체험 - #9 나의 별자리</title>
+<link rel="stylesheet" href="css/wireframe.css">
+<link rel="stylesheet" href="css/oracle.css">
+<style>
+  /*
+    스크린: 점술가가 손을 내리고 흩어지듯 좌우로 비켜줌 → 뒤의 열린 큰 창으로 밤하늘이 드러남
+            → 밤하늘에 관람객의 별자리 + 상징 동물 선화가 선명하게 떠오름 → '다음'을 누를 때까지 루프
+    태블릿: (#8에서 끊김 없이 이어짐) 별자리가 떠오르기 전까지는 살짝 어두운 채 입력 잠금
+            → 밤하늘에 별자리가 떠오르는 순간 밝아지며 카드가 왼쪽으로 밀려나고, 오른쪽에 별자리 정보가 슬며시 나타남
+            → 상세 설명은 원하는 만큼 펼쳐 보고, '다음'을 눌러야 #10으로
+    카드 시작 위치는 #8의 카드 위치(가운데, 아래 버튼만큼 위로 올라간 자리)와 같다.
+  */
+  /* 카드까지 함께 어두워지도록 카드 위에 덮는다 (터치는 통과) */
+  .room-shade { opacity: 0; z-index: 4; pointer-events: none; transition: opacity 1.2s ease-in-out; }
+  .phase-dim .room-shade { opacity: 0.5; }
+  .phase-info .room-shade { opacity: 0; transition-duration: 1.4s; }
+
+  .card-object.info-card {
+    position: absolute;
+    left: 790px;   /* (1920 - 340) / 2 : #8과 같은 가운데 */
+    top: 242px;    /* (1080 - 카드 480 - 여백 56 - 버튼 60) / 2 : #8과 같은 높이 */
+    width: 340px;
+    height: 480px;
+    transition: left 1.4s cubic-bezier(.65,0,.35,1);
+  }
+  .phase-info .card-object.info-card { left: 494px; } /* 카드 340 + 간격 72 + 정보 520 을 가운데 정렬 */
+
+  .detail-info.info-side {
+    position: absolute;
+    left: 906px;   /* 494 + 340 + 72 */
+    top: 242px;
+    width: 520px;
+    z-index: 2;
+  }
+  .info-side > * {
+    opacity: 0;
+    transform: translateX(24px);
+    transition: opacity 0.9s ease, transform 0.9s cubic-bezier(.22,.61,.36,1);
+  }
+  .phase-info .info-side > * { opacity: 1; transform: translateX(0); }
+  .phase-info .info-side > :nth-child(1) { transition-delay: 0.9s; }
+  .phase-info .info-side > :nth-child(2) { transition-delay: 1.05s; }
+  .phase-info .info-side > :nth-child(3) { transition-delay: 1.2s; }
+  .phase-info .info-side > :nth-child(4) { transition-delay: 1.35s; }
+  .phase-info .info-side > :nth-child(5),
+  .phase-info .info-side > :nth-child(6) { transition-delay: 1.5s; }
+
+  #nextBtn {
+    top: auto;
+    left: auto;
+    right: 140px;
+    bottom: 90px;
+    background: transparent;
+    border-color: #fff;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.9s ease 1.8s;
+  }
+  .phase-info #nextBtn { opacity: 1; pointer-events: auto; }
+</style>
+</head>
+<body>
+  <script src="js/fit-screen.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/ambient.js"></script>
+  <div class="screen bg-room" id="screen">
+    <div class="room-shade"></div>
+    <div class="card-object info-card"></div>
+    <div class="detail-info info-side">
+      <div class="name">별자리 이름</div>
+      <div class="row">소속 사신수</div>
+      <div class="row">상징 동물</div>
+      <div class="row" style="margin-bottom:40px;">성격 키워드</div>
+      <button class="accordion-btn" id="toggleBtn">상세 설명 보기</button>
+      <div class="accordion-panel" id="detailPanel" style="width:520px;">
+        <div class="inner">상세 설명 텍스트</div>
+      </div>
+    </div>
+    <button class="corner-btn" id="nextBtn">다음</button>
+    <div class="page-index">#9 page9_constellation_info</div>
+  </div>
+
+  <script>
+    // 타이밍 (단위: ms)
+    const DIM_AT = 300;       // 점술가가 비켜주기 시작하면서 태블릿이 살짝 어두워짐 (입력 잠금)
+    const REVEAL_AT = 4500;   // 밤하늘에 별자리가 선명하게 떠오르는 순간: 밝아지며 카드가 왼쪽으로, 정보가 나타남
+    const UNLOCK_AT = REVEAL_AT + 2400; // 정보와 '다음' 버튼이 다 나타난 뒤 입력 허용
+
+    lockInput();
+    const screenEl = document.getElementById('screen');
+    setTimeout(() => screenEl.classList.add('phase-dim'), DIM_AT);
+    setTimeout(() => {
+      screenEl.classList.remove('phase-dim');
+      screenEl.classList.add('phase-info');
+    }, REVEAL_AT);
+    setTimeout(unlockInput, UNLOCK_AT);
+
+    document.getElementById('toggleBtn').addEventListener('click', () => {
+      const panel = document.getElementById('detailPanel');
+      const btn = document.getElementById('toggleBtn');
+      const open = !panel.classList.contains('open');
+      panel.classList.toggle('open', open);
+      btn.textContent = open ? '상세 설명 닫기' : '상세 설명 보기';
+    });
+    // 다음: 정보와 버튼은 스르륵 사라지고 카드는 다시 가운데로 → 같은 책상 그대로 #10으로 끊김 없이 이어진다
+    const RETURN_MS = 1500;   // 카드가 가운데로 돌아오는 시간 (.info-card transition 1.4s)
+    document.getElementById('nextBtn').addEventListener('click', (e) => {
+      const btn = e.currentTarget;
+      btn.disabled = true;
+      btn.style.transitionDelay = '0s';
+      lockInput();
+      screenEl.classList.remove('phase-info');
+      setTimeout(() => goToInPlace('page10_star_story.html'), RETURN_MS);
+    });
+
+    showScreenNotes([
+      { at: 0, text: '별자리 반복 영상에서 이어짐: 점술가가 손을 느슨히 아래로 내리고, 연기로 된 몸이 흩어지듯 좌우로 살짝 퍼지며 자리를 비켜줌 · 태블릿: 살짝 어두워지고 입력 잠금' },
+      { at: 2500, text: '점술가가 앉아 있던 자리 바로 뒤, 정면의 열린 큰 창으로 바깥 밤하늘이 드러남' },
+      { at: REVEAL_AT, text: '밤하늘에 관람객의 별자리가 선명하게 떠오름: 별들이 선으로 이어지고, 그 실루엣을 따라 상징 동물이 선화로 그려짐 ("내 별자리가 이거구나!" 알 수 있게 크고 분명하게) · 태블릿: 다시 밝아지며 카드가 왼쪽으로 밀려나고 오른쪽에 별자리 정보가 나타남' },
+      { at: UNLOCK_AT, text: '루프: 밤하늘의 별자리와 동물 형상은 그대로 유지, 실내에는 좌우에 맴도는 연기와 빛만 은은하게 움직임. 관람객이 상세 설명을 보고 "다음"을 누를 때까지 반복 (다음을 누르면 #10으로)' },
+    ], { total: UNLOCK_AT, waitInput: true });
+  </script>
+</body>
+</html>

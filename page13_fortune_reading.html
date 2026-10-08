@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>별운관 체험 - #13 운세 해석 중</title>
+<link rel="stylesheet" href="css/wireframe.css">
+<link rel="stylesheet" href="css/oracle.css">
+<style>
+  /*
+    스크린: (#12 '해석 보기' 직후) 점술가가 자세를 고쳐 잡음 → 손 사이 별자리가 더 선명해지고 해석을 시작하듯 연기가 일렁임
+            → 고른 운세(시기·주제)에 따라 별자리 주변의 색·밝기·움직임이 달라지는 해석 루프 (운세 데이터를 받아오는 동안)
+            → 해석이 끝나감: 빛이 한층 밝아짐 → #14
+    태블릿: (#12에서 문장·버튼이 사라지고 긴 카드가 올라간 빈 책상에서 끊김 없이 이어짐) 입력 잠금
+            → 은은한 별빛이 천천히 도는 로딩 → 끝날 즈음 별빛과 빛무리가 조금 밝아짐
+            → 별빛이 걷히고 같은 책상 그대로 #14로 끊김 없이 이어짐
+    운세 데이터를 받아오는 실제 처리가 빨리 끝나도 연출은 최소 시간(READING_MIN)만큼 보여준다.
+  */
+  .room-shade { opacity: 0; transition: opacity 2s ease-in-out; }
+  .phase-reading .room-shade { opacity: 0.4; }
+  .phase-closing .room-shade { opacity: 0.2; }
+
+  .star-field {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 0;
+    height: 0;
+    z-index: 2;
+  }
+  .reading-star {
+    position: absolute;
+    border-radius: 50%;
+    background: #f4f0ff;
+    box-shadow: 0 0 6px 2px rgba(225, 215, 255, 0.45), 0 0 16px 5px rgba(210, 200, 255, 0.15);
+    opacity: 0;
+    will-change: transform, opacity;
+  }
+  .core-glow {
+    position: absolute;
+    left: -180px;
+    top: -180px;
+    width: 360px;
+    height: 360px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(230, 220, 255, 0.22) 0%, rgba(200, 190, 255, 0.07) 40%, rgba(0, 0, 0, 0) 70%);
+    opacity: 0;
+    transform: scale(0.7);
+    transition: opacity 2.5s ease, transform 2.5s ease;
+  }
+  .phase-reading .core-glow { opacity: 0.6; transform: scale(0.9); }
+  .phase-closing .core-glow { opacity: 1; transform: scale(1.25); transition-duration: 1.8s; }
+  /* #14로 넘어가기 직전: 별빛과 어둠이 걷힌다 */
+  .phase-out .room-shade { opacity: 0; transition-duration: 1s; }
+  .phase-out .core-glow { opacity: 0; transform: scale(1.5); transition-duration: 1s; }
+</style>
+</head>
+<body>
+  <script src="js/fit-screen.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/ambient.js"></script>
+  <div class="screen bg-room" id="screen">
+    <div class="room-shade"></div>
+    <div class="star-field" id="field">
+      <div class="core-glow"></div>
+    </div>
+    <div class="page-index">#13 page13_fortune_reading</div>
+  </div>
+
+  <script>
+    // 타이밍 (단위: ms) - 스크린 영상이 나오면 이 값들만 영상에 맞추면 된다.
+    const STARS_AT = 1500;      // 점술가가 자세를 고친 뒤 해석이 시작되는 순간: 태블릿 별빛이 나타남
+    const READING_MIN = 11000;  // 이 시점 전에는 데이터를 받았더라도 해석 루프를 계속 보여준다
+    const CLOSING_MS = 2200;    // 끝날 즈음 밝아지는 구간 (로딩이 곧 끝남을 알림)
+    const OUT_MS = 1000;        // 별빛이 걷히고 #14로 이어지기까지
+
+    // #6·#11·#12에서 고른 값
+    let picks = {};
+    try {
+      picks = {
+        birth: JSON.parse(sessionStorage.getItem('birth')),
+        period: sessionStorage.getItem('fortunePeriod'),
+        topic: sessionStorage.getItem('fortuneTopic'),
+      };
+    } catch (e) {}
+
+    // 임시 구현: 실제 운세 데이터 요청으로 바뀔 자리. 결과는 다음 장면에서 쓰도록 저장해 둔다.
+    function fetchFortune(p) {
+      return new Promise((resolve) => setTimeout(() => resolve({ picks: p, fortune: null }), 300));
+    }
+
+    lockInput();
+    const screenEl = document.getElementById('screen');
+    const field = document.getElementById('field');
+    const rand = (min, max) => min + Math.random() * (max - min);
+
+    // 은은한 별빛: 가운데를 중심으로 천천히 돌며 은은하게 깜빡인다. closing이 되면 밝아지고 살짝 퍼진다
+    const stars = [];
+    for (let i = 0; i < 16; i++) {
+      const el = document.createElement('div');
+      el.className = 'reading-star';
+      const size = rand(2.5, 6);
+      el.style.width = el.style.height = size + 'px';
+      el.style.margin = -size / 2 + 'px 0 0 ' + -size / 2 + 'px';
+      field.appendChild(el);
+      stars.push({
+        el,
+        angle: (i / 16) * Math.PI * 2 + rand(-0.25, 0.25),
+        r: rand(70, 160),
+        speed: rand(0.6, 1.1) * (i % 2 ? 1 : -1) * 0.00035, // 안쪽·바깥쪽 별이 서로 반대로 천천히 돈다
+        phase: rand(0, Math.PI * 2),
+      });
+    }
+    let level = 0;         // 0 → 보이지 않음, 1 → 해석 중(은은), 2 → 끝날 즈음(밝게)
+    let levelFrom = 0, levelTo = 0, levelStart = 0, levelDur = 1;
+    function fadeLevel(to, dur) { levelFrom = level; levelTo = to; levelStart = performance.now(); levelDur = dur; }
+    const t0 = performance.now();
+    function frame(now) {
+      const t = now - t0;
+      const p = Math.min(1, (now - levelStart) / levelDur);
+      level = levelFrom + (levelTo - levelFrom) * p;
+      stars.forEach((s) => {
+        const a = s.angle + t * s.speed;
+        const r = s.r * (1 + 0.08 * Math.sin(t * 0.0009 + s.phase)) * (1 + 0.15 * Math.max(0, level - 1));
+        const twinkle = 0.65 + 0.35 * Math.sin(t * 0.003 + s.phase);
+        const base = level <= 1 ? 0.45 * level : 0.45 + 0.5 * (level - 1);
+        s.el.style.transform = `translate(${Math.cos(a) * r}px, ${Math.sin(a) * r * 0.82}px)`;
+        s.el.style.opacity = base * twinkle;
+      });
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    async function play() {
+      const loading = fetchFortune(picks).then((result) => {
+        try { sessionStorage.setItem('fortuneResult', JSON.stringify(result)); } catch (e) {}
+      });
+      await wait(STARS_AT);
+      screenEl.classList.add('phase-reading');
+      fadeLevel(1, 2500);
+      // 데이터를 받고, 최소 연출 시간도 지나야 마무리로 넘어간다
+      await Promise.all([loading, wait(READING_MIN - STARS_AT)]);
+      screenEl.classList.add('phase-closing');
+      fadeLevel(2, 1800);
+      await wait(CLOSING_MS);
+      screenEl.classList.add('phase-out');
+      fadeLevel(0, OUT_MS);
+      await wait(OUT_MS);
+      goToInPlace('page14_interpretation.html');
+    }
+
+    showScreenNotes([
+      { at: -2100, text: '(#12에서 "해석 보기" 직후) 펼친 손 사이 별빛 루프에서 이어지며, 점술가가 자세를 고쳐 잡음 · 태블릿: 문장·버튼이 사라지고 긴 카드가 위로 올라감' },
+      { at: 0, text: '손 사이의 별자리가 좀 더 선명해지고, 해석을 시작하듯 연기가 살짝씩 일렁이기 시작 · 태블릿: 빈 책상, 입력 잠금' },
+      { at: STARS_AT, text: '해석 루프: 관람객이 고른 운세(시기·주제)에 따라 별자리 주변의 색·밝기·움직임이 달라짐 (운세 데이터를 받아오는 동안 반복) · 태블릿: 살짝 어두워지며 은은한 별빛이 천천히 돔' },
+      { at: READING_MIN, text: '해석이 끝나감: 별자리 주변의 빛이 한층 밝아짐 · 태블릿: 별빛과 빛무리가 밝아지며 로딩이 곧 끝남을 알림' },
+      { at: READING_MIN + CLOSING_MS, text: '태블릿: 별빛이 걷히고 #14로 끊김 없이 이어짐' },
+    ], { total: READING_MIN + CLOSING_MS + OUT_MS });
+
+    play();
+  </script>
+</body>
+</html>

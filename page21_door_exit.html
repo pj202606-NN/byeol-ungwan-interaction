@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>별운관 체험 - #21 문 밖으로</title>
+<link rel="stylesheet" href="css/wireframe.css">
+<link rel="stylesheet" href="css/oracle.css">
+<style>
+  /*
+    스크린: 우주 공간에 덩그러니 놓인, 처음 두드렸던 문을 향해 뒤로 끌려나감 → 별빛이 빠르게 멀어지며 문을 통과(퇴장)
+            → 처음처럼 어두운 체험 공간에서 문을 정면으로 바라보는 구도 (문은 아직 열린 채 스크린에 있음)
+    태블릿: 입력 잠금, 어두운 별빛 화면. 별빛이 멀어지는 순간 파티클이 안쪽으로 빠르게 모였다가 다시 고요해짐 → 자동으로 #22
+  */
+  .field {
+    position: absolute;
+    inset: 0;
+    transform: scale(1);
+    transition: transform 2.5s cubic-bezier(.5,0,.8,.5), filter 2.5s ease;
+  }
+  .tint-cool {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(ellipse at 50% 45%, rgba(90,110,170,0.14) 0%, rgba(0,0,0,0) 70%);
+    opacity: 0.8;
+    transition: opacity 2s ease;
+  }
+  /* 별빛이 빠르게 멀어짐: 시야 안쪽으로 빨려 들어가듯 작아지며 밝아짐 */
+  .phase-rush .field { transform: scale(0.65); filter: brightness(1.5); }
+  /* 문을 통과: 한순간 어둠 */
+  .phase-through .field { transform: scale(0.55); filter: brightness(0.5); transition-duration: 0.8s; }
+  .phase-through .tint-cool { opacity: 0; transition-duration: 0.8s; }
+  /* 어두운 체험 공간에서 문을 바라봄: 고요하게 제자리 */
+  .phase-front .field { transform: scale(1); filter: brightness(0.85); transition: transform 2.2s cubic-bezier(.22,.61,.36,1), filter 2.2s ease; }
+  .phase-front .tint-cool { opacity: 0.35; }
+</style>
+</head>
+<body>
+  <script src="js/fit-screen.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/ambient.js"></script>
+  <div class="screen bg-fade" id="screen">
+    <div class="field" id="field">
+      <div class="milky-band"></div>
+    </div>
+    <div class="tint-cool"></div>
+    <div class="page-index">#21 page21_door_exit</div>
+  </div>
+
+  <script>
+    // 임시 구현: 스크린 영상이 나오면 각 단계의 at(ms) 값만 영상의 전환 시점에 맞추면 된다.
+    const PHASES = [
+      { at: 0,    name: 'pull',    screen: '우주 공간에 덩그러니 놓인, 처음 두드렸던 문을 향해 뒤로 끌려나가기 시작' },
+      { at: 2000, name: 'rush',    screen: '별빛이 빠르게 멀어짐 · 태블릿: 파티클이 안쪽으로 빨려 들듯 모이며 밝아짐' },
+      { at: 4500, name: 'through', screen: '문을 통과해 밖으로 퇴장 · 태블릿: 한순간 어두워짐' },
+      { at: 5300, name: 'front',   screen: '처음처럼 어두운 체험 공간에서 문을 정면으로 바라보는 구도 (문은 아직 열린 채 스크린에 있음) · 태블릿: 고요한 어두운 별빛' },
+    ];
+    const NEXT_AT = 8000;       // #22로 이어짐
+
+    lockInput();
+    const field = document.getElementById('field');
+    spawnSmoke(field, 6);
+    spawnHaze(field, 30);
+
+    const screenEl = document.getElementById('screen');
+    PHASES.forEach((phase) => {
+      setTimeout(() => {
+        PHASES.forEach((p) => screenEl.classList.remove('phase-' + p.name));
+        screenEl.classList.add('phase-' + phase.name);
+      }, phase.at);
+    });
+    setTimeout(() => goToInPlace('page22_door_close.html', { crossfade: 1200 }), NEXT_AT);
+
+    showScreenNotes([
+      ...PHASES.map((p) => ({ at: p.at, text: p.screen })),
+      { at: NEXT_AT, text: '태블릿 #22로 이어짐' },
+    ], { total: NEXT_AT });
+  </script>
+</body>
+</html>

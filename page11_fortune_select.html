@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>별운관 체험 - #11 운세 선택</title>
+<link rel="stylesheet" href="css/wireframe.css">
+<link rel="stylesheet" href="css/oracle.css">
+<style>
+  /*
+    스크린: (#10에서 버튼 직후) 점술가가 손 위에 띄워둔 카드를 움켜쥐듯 손을 모음 → 한 손으로 화면 아래쪽에 안개를 뿌리듯 펼침(카드는 사라짐)
+            → 점술가가 양손을 다시 모았다가 어깨 너비로 펼침, 그 사이에 별자리·별빛이 안개와 함께 깜빡임 (카드를 고를 때까지 루프)
+    태블릿: (#10의 어두운 책상에서 끊김 없이 이어짐) 안개가 아래로 뿌려지는 순간 밝아지며 위에서 카드 3장이 내려옴
+            → 안내 문구가 뜨고 카드 선택 가능 → 고른 카드의 시기(오늘/이달/올해)를 저장하고 #12로
+  */
+  .room-shade { opacity: 0.5; transition: opacity 1.5s ease-in-out; }
+  .phase-drop .room-shade { opacity: 0; }
+
+  /* 카드 3장과 안내 문구는 각자 차례가 오기 전까지 숨겨 둔다 */
+  .fortune-cards { visibility: hidden; }
+  .phase-drop .fortune-cards { visibility: visible; }
+  .fortune-cards .card-object { cursor: pointer; }
+  .select-caption {
+    margin-bottom: 0;
+    z-index: 2;
+    opacity: 0;
+    transition: opacity 1.2s ease;
+  }
+  .phase-ready .select-caption { opacity: 1; }
+  /* #12에서 '뒤로가기'로 돌아온 경우: 카드가 이미 내려와 있는 상태로 바로 보여준다 */
+  .skip-intro .card-object,
+  .skip-intro .select-caption,
+  .skip-intro .room-shade { animation: none !important; transition: none !important; }
+
+  .fortune-cards {
+    display: flex;
+    align-items: center;
+    /* skewX 때문에 카드 위쪽 모서리가 안쪽(서로를 향해)으로 밀려나오므로,
+       레이아웃상의 gap을 넉넉하게 줘서 실제로는 떨어져 보이게 한다. */
+    gap: 110px;
+    margin-bottom: 130px;
+    z-index: 2;
+  }
+  /* 세 카드 모두 폭(윗변=아랫변, 핑크 선)은 340px로 동일.
+     세로변(파란 선) 길이도 전부 440px로 맞춘다. skewX(θ)는 세로변을
+     1/cos(θ)배 만큼 늘리기 때문에, 스큐 카드는 그만큼 미리 높이를
+     줄여서(440*cos(10°)≈433px) 스큐 후 실제 변 길이가 440px이 되게 한다. */
+  .fortune-card {
+    width: 340px;
+    height: 440px;
+  }
+
+  /*
+    카드1(왼쪽)·카드3(오른쪽)은 네 꼭짓점 중 한 점만 옮겨야 해서 skewX(대칭
+    변환) 하나로는 표현이 안 된다. 그래서 둘 다:
+    - 레이아웃(형제 카드 위치)에 영향 주는 "슬롯"은 기존과 동일한 340x433 그대로 두고,
+    - 그 슬롯 안에 절대위치로 더 넓은(416.34px) 실제 카드 도형을 겹쳐서,
+      clip-path로 네 꼭짓점을 직접 지정한다.
+    주의: clip-path로 잘라낸 점은 실제 박스 모서리가 아니면 border-radius가
+    적용되지 않아 각지게 보인다. 그래서 원래 박스의 진짜 모서리와 일치하지
+    않는 점들은 각 점 앞뒤로 짧은 직선 2개를 추가해 작은 라운드처럼 보이게
+    깎아준다(반지름 12px 근사).
+  */
+  .card-slot-1, .card-slot-3 {
+    position: relative;
+    width: 340px;
+    height: 433px;
+  }
+  .card-shape-1 {
+    position: absolute;
+    left: -38.17px;
+    top: 0;
+    width: 416.34px;
+    height: 433px;
+    /* 4점: TL(86.34,0 - 원래 76.34에서 +10) TR(416.34,0=실제모서리) BR(340,433) BL(0,433=실제모서리)
+       TR·BL은 이 박스의 진짜 모서리라 라운드 유지, TL·BR은 잘린 점이라 근처를 깎아 라운드를 흉내낸다. */
+    clip-path: polygon(
+      83.99px 11.77px, 98.34px 0px,
+      416.34px 0px,
+      342.08px 421.18px, 328px 433px,
+      0px 433px
+    );
+  }
+  .card-shape-3 {
+    position: absolute;
+    left: -38.17px;
+    top: 0;
+    width: 416.34px;
+    height: 433px;
+    /* 카드1의 좌우반전: TL(0,0=실제모서리) TR(330,0 - 원래 340에서 -10) BR(416.34,433=실제모서리) BL(76.34,433)
+       TL·BR은 진짜 모서리라 라운드 유지, TR·BL은 잘린 점이라 근처를 깎아 라운드를 흉내낸다. */
+    clip-path: polygon(
+      0px 0px,
+      318px 0px, 332.35px 11.77px,
+      416.34px 433px,
+      88.34px 433px, 74.26px 421.18px
+    );
+  }
+
+  /* 생년월일 입력 페이지의 종이(paper-drop)와 같은 방식으로,
+     최종 정지 상태를 애니메이션의 to 키프레임에 그대로 넣어
+     위에서 부드럽게 떨어져 내려오게 한다. 카드마다 살짝 시차를 준다. */
+  @keyframes cardDrop {
+    from { transform: translateY(-140%); opacity: 0; }
+    to   { transform: translateY(0); opacity: 1; }
+  }
+  .phase-drop .card-shape-1 { animation: cardDrop 1.3s cubic-bezier(.22,.61,.36,1) 0s both; }
+  .phase-drop .card-shape-3 { animation: cardDrop 1.3s cubic-bezier(.22,.61,.36,1) 0.24s both; }
+
+  /* 윗변은 기존 340px 그대로 두고, 아랫변만 400px로 넓힌 사다리꼴.
+     양쪽 위 두 점(7.5%/92.5%)은 진짜 박스 모서리가 아니라서 라운드가
+     풀리므로 마찬가지로 짧게 깎아 라운드를 흉내낸다. 아래 두 점(0/100%)은
+     실제 모서리라 라운드가 그대로 유지된다. */
+  .fortune-card:nth-child(2) {
+    width: 400px;
+    height: 440px;
+    clip-path: polygon(
+      0px 440px,
+      29.18px 11.97px, 42px 0px,
+      358px 0px, 370.82px 11.97px,
+      400px 440px
+    );
+  }
+  .phase-drop .fortune-card:nth-child(2) {
+    animation: cardDrop 1.3s cubic-bezier(.22,.61,.36,1) 0.12s both;
+  }
+</style>
+</head>
+<body>
+  <script src="js/fit-screen.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/ambient.js"></script>
+  <div class="screen bg-room" id="screen">
+    <div class="room-shade"></div>
+    <div class="fortune-cards">
+      <div class="card-slot-1">
+        <div class="card-object card-shape-1" data-period="today">오늘의 운세</div>
+      </div>
+      <div class="card-object fortune-card" data-period="month">이달의 운세</div>
+      <div class="card-slot-3">
+        <div class="card-object card-shape-3" data-period="year">올해의 운세</div>
+      </div>
+    </div>
+    <div class="subtitle select-caption">듣고 싶은 이야기의 시기를 선택해 주세요</div>
+    <div class="page-index">#11 page11_fortune_select</div>
+  </div>
+
+  <script>
+    // 타이밍 (단위: ms) - 스크린 영상이 나오면 이 값들만 영상에 맞추면 된다.
+    const FLING_AT = 900;      // 스크린: 모았던 손을 화면 아래쪽으로 뿌리듯 펼치기 시작
+    const DROP_AT = 2200;      // 안개가 화면 아래로 뿌려지는 순간: 태블릿이 밝아지며 카드 3장이 내려옴
+    const DROP_MS = 1540;      // 카드 3장이 다 내려오는 시간 (1.3초 + 마지막 카드 시차 0.24초)
+    const CAPTION_DELAY = 400; // 카드가 다 내려온 뒤 안내 문구가 뜨기까지
+    const CAPTION_AT = DROP_AT + DROP_MS + CAPTION_DELAY;
+
+    const screenEl = document.getElementById('screen');
+    // #12의 '뒤로가기' 버튼으로 돌아온 경우에만 선택 화면부터 (테스트 도구의 '← 이전'은 처음부터)
+    const backFromNext = /[?&]ready\b/.test(location.search);
+    if (backFromNext) {
+      screenEl.classList.add('skip-intro', 'phase-drop', 'phase-ready');
+    } else {
+      lockInput();
+      setTimeout(() => screenEl.classList.add('phase-drop'), DROP_AT);
+      setTimeout(() => {
+        screenEl.classList.add('phase-ready');
+        unlockInput();
+      }, CAPTION_AT);
+    }
+
+    // 카드 선택: 고른 시기를 저장해 두고 #12로
+    document.querySelectorAll('.fortune-cards [data-period]').forEach((card) => {
+      card.addEventListener('click', () => {
+        try { sessionStorage.setItem('fortunePeriod', card.dataset.period); } catch (e) {}
+        lockInput();
+        goTo('page12_keyword_select.html');
+      });
+    });
+
+    if (backFromNext) showScreenNotes([
+      { at: 0, text: '(#12에서 뒤로가기) 루프: 펼친 손 사이에서 별자리·별빛이 반짝임. 관람객이 카드를 고를 때까지 반복 · 태블릿: 카드 3장이 내려와 있는 선택 화면' },
+    ]);
+    else showScreenNotes([
+      { at: -900, text: '(#10에서 버튼 직후) 점술가가 손바닥 위에 띄워둔 카드를 움켜쥐듯 손을 한 번 모음' },
+      { at: FLING_AT, text: '모은 손을 화면 아래쪽을 향해 한 손으로 뿌리듯 스르륵 펼침. 손 안의 카드는 자연스럽게 사라져 있고, 뿌려지는 것은 신비한 안개' },
+      { at: DROP_AT, text: '안개가 화면 아래로 뿌려짐 · 태블릿: 밝아지며 위에서 카드 3장(오늘/이달/올해의 운세)이 내려옴' },
+      { at: CAPTION_AT, text: '점술가가 양손을 다시 모았다가 어깨 너비로 쭉 펼침. 그 사이에서 별자리·별빛이 안개와 함께 깜빡이며 빛남 · 태블릿: "듣고 싶은 이야기의 시기를 선택해 주세요" 안내가 뜨고 카드 선택 가능' },
+      { at: CAPTION_AT + 2500, text: '루프: 펼친 손 사이에서 별자리·별빛이 반짝임. 관람객이 카드를 고를 때까지 반복 (고르면 #12로)' },
+    ], { total: CAPTION_AT, waitInput: true });
+  </script>
+</body>
+</html>

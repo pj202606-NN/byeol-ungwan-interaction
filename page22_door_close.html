@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>별운관 체험 - #22 문이 닫힘</title>
+<link rel="stylesheet" href="css/wireframe.css">
+<link rel="stylesheet" href="css/oracle.css">
+<style>
+  /*
+    스크린: 문이 닫히고 천이 다시 덮여 처음과 완전히 같은 형태로 → 분위기가 훨씬 잔잔해짐(체험이 끝남을 알림)
+            → 카메라 시야가 위로 올라가 문 위의 밤하늘로 (#1의 별 궤적 루프)
+    태블릿: 입력 잠금, 어두운 별빛이 점점 잔잔해짐 → 시야가 위로 올라가는 타이밍에 별빛이 걷히고
+            #1의 문 화면이 시야가 내려오듯 아래에서 떠오르며 밝아짐 → 그대로 #1로 (처음으로 돌아감)
+  */
+  .field {
+    position: absolute;
+    inset: 0;
+    filter: brightness(0.85);
+    transition: opacity 3s ease, filter 3s ease;
+  }
+  .tint-cool {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(ellipse at 50% 45%, rgba(90,110,170,0.14) 0%, rgba(0,0,0,0) 70%);
+    opacity: 0.35;
+    transition: opacity 3s ease;
+  }
+  /* 잔잔해짐: 별빛과 연기가 한층 옅어짐 */
+  .phase-calm .field { opacity: 0.55; filter: brightness(0.7); }
+  .phase-calm .tint-cool { opacity: 0.15; }
+  /* 시야가 위로: 별빛이 걷히며 #1로 */
+  .phase-up .field { opacity: 0; transform: translateY(-80px); transition: opacity 1.2s ease, transform 1.2s ease-in; }
+  .phase-up .tint-cool { opacity: 0; transition-duration: 1.2s; }
+</style>
+</head>
+<body>
+  <script src="js/fit-screen.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/ambient.js"></script>
+  <div class="screen bg-fade" id="screen">
+    <div class="field" id="field">
+      <div class="milky-band"></div>
+    </div>
+    <div class="tint-cool"></div>
+    <div class="page-index">#22 page22_door_close</div>
+  </div>
+
+  <script>
+    // 타이밍 (단위: ms) - 스크린 영상이 나오면 이 값들만 영상에 맞추면 된다.
+    const CLOTH_AT = 2500;   // 스크린: 닫힌 문 위로 천이 다시 덮임
+    const CALM_AT = 5000;    // 스크린: 처음과 같은 모습, 분위기가 훨씬 잔잔해짐
+    const UP_AT = 8000;      // 스크린: 카메라 시야가 위로 올라가기 시작 = 태블릿 별빛이 걷힘
+    const UP_MS = 1200;      // 별빛이 걷히고 #1 문 화면이 떠오르기 시작하기까지
+
+    lockInput();
+    const field = document.getElementById('field');
+    spawnSmoke(field, 6);
+    spawnHaze(field, 30);
+
+    const screenEl = document.getElementById('screen');
+    setTimeout(() => screenEl.classList.add('phase-calm'), CALM_AT);
+    setTimeout(() => screenEl.classList.add('phase-up'), UP_AT);
+    // #1은 ?reveal이면 시야가 내려오듯 문 화면이 아래에서 떠오르며 밝아진다 (그 뒤로는 평소의 #1과 같음)
+    setTimeout(() => goToInPlace('page1_door.html?reveal'), UP_AT + UP_MS);
+
+    showScreenNotes([
+      { at: 0, text: '열려 있던 문이 닫힘 · 태블릿: 입력 잠금, 어두운 별빛' },
+      { at: CLOTH_AT, text: '닫힌 문 위로 천이 다시 덮여, 처음과 완전히 같은 형태가 됨' },
+      { at: CALM_AT, text: '분위기가 훨씬 잔잔해짐 (체험이 끝났음을 간접적으로 알림) · 태블릿: 별빛과 연기가 한층 옅어짐' },
+      { at: UP_AT, text: '카메라 시야가 문에서 위로 올라가 문 위의 밤하늘로 돌아감 → #1의 별 궤적 루프로 이어짐 · 태블릿: 별빛이 걷힘' },
+      { at: UP_AT + UP_MS, text: '태블릿: 시야가 내려오듯 #1의 문 화면이 아래에서 떠오르며 밝아짐 → 그대로 #1 (처음으로)' },
+    ], { total: UP_AT + UP_MS });
+  </script>
+</body>
+</html>
