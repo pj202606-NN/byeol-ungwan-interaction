@@ -7,10 +7,14 @@
 <link rel="stylesheet" href="css/oracle.css">
 <style>
   /*
-    스크린: (#9에서 '다음' 직후) 카메라가 밤하늘에서 살짝 뒤로 빠지고, 흩어졌던 점술가가 다시 합쳐져 반듯하게 앉음
-            → 화면 아래에서 카드가 올라와 점술가의 손으로 → 한쪽 손바닥 위에 카드를 똑바로 세움 → 대사
-    태블릿: (#9에서 정보가 사라지고 카드가 가운데로 돌아온 상태에서 끊김 없이 이어짐)
-            → 카드가 화면 위로 올라감 → 살짝 어두워지며 대사 자막 → 어두운 채 '별이 가져온 이야기 듣기' 버튼 활성화
+    스크린: (#9에서 '다음' 직후, 영상 07) 카메라가 밤하늘에서 살짝 뒤로 빠지고, 흩어졌던 점술가가 다시 합쳐져 반듯하게 앉음
+            → 화면 아래에서 카드가 올라와 점술가의 손으로 → 한쪽 손바닥 위에 카드를 똑바로 세움 → 더 깊이 살펴볼지 질문
+            → (영상 08 대기 루프) → '더 깊이 살펴보기' → 영상 09 → 10 → 11(이야기를 들을지 질문) → 영상 12 대기 루프
+    태블릿: (#9에서 '다음'을 누르자마자 카드가 화면 위로 올라간 어두운 책상에서 끊김 없이 이어짐 = ?risen)
+            → 대사 자막 → 어두운 채 '더 깊이 살펴보기' 버튼
+            (#9를 거치지 않고 열면 예전처럼 가운데 카드가 RISE_AT에 위로 올라가고, 대사와 함께 어두워진다)
+            → 누르면 버튼이 사라지고, 영상 09~11 동안 기다림 → 같은 자리·같은 등장 방식으로 '별이 가져온 이야기 듣기' 버튼
+    두 버튼은 같은 버튼(#storyBtn)의 글자만 바꿔 쓰므로 디자인·위치·등장 애니메이션이 같다.
   */
   .room-shade { opacity: 0; transition: opacity 1.2s ease-in-out; }
   .phase-dim .room-shade { opacity: 0.5; }
@@ -41,68 +45,105 @@
   <script src="js/nav.js"></script>
   <script src="js/ambient.js"></script>
   <script src="js/subtitles.js"></script>
-  <div class="screen bg-room" id="screen">
+  <script src="js/timeline.js"></script>
+  <div class="screen bg-room bg-desk" id="screen">
     <div class="room-shade"></div>
     <div class="card-object info-card" id="card"></div>
-    <button class="btn reveal-btn" id="storyBtn">별이 가져온 이야기 듣기</button>
+    <button class="btn btn-light reveal-btn" id="storyBtn">더 깊이 살펴보기</button>
     <div class="guide-subtitle" id="subtitle"></div>
     <div class="page-index">#10 page10_star_story</div>
   </div>
 
   <script>
-    // 타이밍 (단위: ms) - 스크린 영상이 나오면 이 값들만 영상에 맞추면 된다.
-    const SETTLE_AT = 3500;   // 스크린: 카메라가 뒤로 빠지고 점술가가 다시 합쳐지는 연출이 끝나고, 반듯하게 앉은 모습 (#9의 '다음' 직후부터 약 5초)
-    const RISE_AT = 6000;     // 반듯하게 앉은 모습을 잠시 보여준 뒤, 태블릿 카드가 위로 올라가기 시작 (= 스크린 아래에서 카드가 올라오기 시작)
+    // 시각은 첫 단계는 영상 07, 두 번째 단계는 영상 09~11의 재생 시각(ms).
+    // 값과 자막은 js/timeline.js의 TIMELINE.page10(첫 단계)·page10Deep(두 번째 단계)에서 조절한다.
+    const T = TIMELINE.page10;
+    const TD = TIMELINE.page10Deep;
+    const clock = UnitySync.clock(T.video, T.fallback);
+    const RISE_AT = T.riseAt; // 태블릿 카드가 위로 올라가기 시작 (= 스크린 아래에서 카드가 올라오기 시작)
     const RISE_MS = 1300;     // 카드가 올라가는 애니메이션 길이 (oracle.css cardRise)
-    const PLACE_MS = 1500;    // 스크린: 카드를 받아 한쪽 손바닥 위에 똑바로 세우는 시간
-    const READY_DELAY = 300;  // 대사가 끝난 뒤 버튼이 뜨기까지
-
-    // 점술가 대사 (임시 문구 - 실제 대본이 나오면 교체)
-    const LINES = [
-      { text: '당신의 별은 선명하게 보이는군요.', hold: 3200, gap: 800 },
-      { text: '이제 그 별이 가져온 이야기를 들어보시겠어요?', hold: 3800, gap: 0 },
-    ];
+    const DEEP_LABEL = '더 깊이 살펴보기';
+    const STORY_LABEL = '별이 가져온 이야기 듣기';
 
     lockInput();
     const screenEl = document.getElementById('screen');
     const card = document.getElementById('card');
+    // #9의 '다음'으로 왔으면 카드는 이미 위로 올라갔고 책상도 어두운 상태 (#9의 desk-shade와 같은 0.5)
+    const risen = /[?&]risen\b/.test(location.search);
+    if (risen) {
+      card.style.display = 'none';
+      screenEl.querySelector('.room-shade').style.transition = 'none';
+      screenEl.classList.add('phase-dim');
+    }
     const btn = document.getElementById('storyBtn');
     const subtitle = document.getElementById('subtitle');
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
-    const talkAt = RISE_AT + RISE_MS + PLACE_MS;
-    async function play() {
-      await wait(RISE_AT);
-      card.classList.add('card-rise');
-      await wait(RISE_MS + PLACE_MS);
-      screenEl.classList.add('phase-dim');
-      await playSubtitles(subtitle, LINES);
-      await wait(READY_DELAY);
-      // 어두운 책상 화면 그대로 버튼만 활성화
+    // 버튼을 같은 자리에서 같은 방식(reveal-btn)으로 띄운다
+    let step = 'deep';
+    function revealButton(label) {
+      btn.textContent = label;
+      btn.disabled = false;
       btn.classList.add('revealed');
       unlockInput();
     }
-
-    // 버튼은 스르륵 사라지고, 같은 (어두운) 책상 그대로 #11로 끊김 없이 이어진다
-    btn.addEventListener('click', () => {
+    function hideButton() {
       btn.disabled = true;
       btn.classList.remove('revealed');
       lockInput();
-      setTimeout(() => goToInPlace('page11_fortune_select.html'), 900);
+    }
+
+    // 첫 단계: 카드가 올라가고 질문 → 영상 08(대기 루프)에 들어가면 '더 깊이 살펴보기'
+    async function playQuestion() {
+      if (!risen) {
+        await clock.at(RISE_AT);
+        card.classList.add('card-rise');
+      }
+      const first = T.lines[0];
+      clock.at(first.at - SUBTITLE_LEAD).then(() => screenEl.classList.add('phase-dim'));
+      await playSubtitlesAt(subtitle, T.lines, clock);
+      await Promise.all([wait(T.readyDelay), clock.reach(8)]);
+      // 어두운 책상 화면 그대로 버튼만 활성화
+      revealButton(DEEP_LABEL);
+    }
+
+    // 두 번째 단계: 영상 09 → 10 → 11 동안 기다리고, 영상 12(대기 루프)에 들어가면 '별이 가져온 이야기 듣기'.
+    // 첫 버튼을 누른 직후에는 뜨지 않도록 최소 시간(minWait)도 지나야 한다
+    async function playDeep() {
+      const deepClock = UnitySync.clock(TD.video, TD.fallback);
+      await playSubtitlesAt(subtitle, TD.lines, deepClock);
+      await Promise.all([wait(TD.minWait), wait(TD.readyDelay), deepClock.reach(12)]);
+      step = 'story';
+      revealButton(STORY_LABEL);
+    }
+
+    btn.addEventListener('click', () => {
+      if (btn.disabled) return;
+      hideButton();
+      if (step === 'deep') {
+        step = 'deep-wait';
+        sendUnityAction('deep');    // 영상 08 → 09
+        playDeep();
+      } else if (step === 'story') {
+        step = 'done';
+        sendUnityAction('story');   // 영상 12 → 13
+        // 버튼은 스르륵 사라지고, 같은 (어두운) 책상 그대로 #11로 끊김 없이 이어진다
+        setTimeout(() => goToInPlace('page11_fortune_select.html'), 900);
+      }
     });
 
-    const schedule = subtitleSchedule(LINES, talkAt);
-    const readyAt = schedule.end + READY_DELAY;
     showScreenNotes([
-      { at: -1500, text: '(#9에서 "다음" 직후) 밤하늘에 초점을 맞췄던 카메라가 살짝 뒤로 빠지고, 좌우로 흩어졌던 안개 점술가가 다시 합쳐져 뚜렷해짐 · 태블릿: 정보가 사라지고 카드가 가운데로 돌아옴' },
-      { at: SETTLE_AT, text: '점술가가 다시 반듯하게 앉은 모습 (잠시 머무름)' },
-      { at: RISE_AT, text: '화면 아래에서 카드가 올라옴 · 태블릿: 카드가 화면 위로 올라감' },
-      { at: RISE_AT + RISE_MS, text: '카드가 점술가의 손에 들어감. 한쪽 손바닥 위에 카드를 똑바로 세워 올림 (납작하게 붙지 않고 서 있는, 신비로운 느낌)' },
-      ...lineNotes(LINES, schedule, '점술가').map((n, i) => (i === 0 ? { at: n.at, text: n.text + ' · 태블릿: 살짝 어두워지고 자막' } : n)),
-      { at: readyAt, text: '카드를 손 위에 세운 채 대기 루프. 관람객이 버튼을 누를 때까지 반복 (누르면 #11로) · 태블릿: 어두운 책상 그대로 "별이 가져온 이야기 듣기" 버튼 활성화' },
-    ], { total: readyAt, waitInput: true });
+      { at: 0, text: '(#9에서 "다음" 직후, 영상 07) 밤하늘에 초점을 맞췄던 카메라가 살짝 뒤로 빠지고, 좌우로 흩어졌던 안개 점술가가 다시 합쳐져 뚜렷해짐 · 태블릿: 정보가 사라지고 카드가 가운데로 돌아옴' },
+      { at: RISE_AT, text: '화면 아래에서 카드가 올라옴' + (risen ? ' (태블릿 카드는 #9에서 "다음"을 누르자마자 이미 올라감)' : ' · 태블릿: 카드가 화면 위로 올라감') },
+      { at: RISE_AT + RISE_MS, text: '카드가 점술가의 손에 들어감. 한쪽 손바닥 위에 카드를 똑바로 세워 올림' },
+      ...cueNotes(T.lines, '점술가').map((n, i) => (i === 0 ? { at: n.at, text: n.text + ' · 태블릿: 살짝 어두워지고 자막' } : n)),
+      { at: clock.noteTime(8, 0), text: '영상 08: 카드를 손 위에 세운 채 대기 루프 · 태블릿: "더 깊이 살펴보기" 버튼 (누르면 영상 09)' },
+      { at: clock.noteTime(8, 0) + 1, text: '"더 깊이 살펴보기" 뒤: 영상 09 → 10(약 15초) → 11 · 태블릿: 같은 화면에서 기다림' },
+      ...cueNotes(TD.lines, '영상 11 점술가').map((n, i) => ({ at: clock.noteTime(8, 0) + 2 + i, text: n.text })),
+      { at: clock.noteTime(8, 0) + 9, text: '영상 12 대기 루프 · 태블릿: 같은 자리에 "별이 가져온 이야기 듣기" 버튼 (누르면 영상 13, 태블릿 #11)' },
+    ], { videoStart: clock.sceneStart, total: clock.noteTime(8, 0), waitInput: true });
 
-    play();
+    playQuestion();
   </script>
 </body>
 </html>

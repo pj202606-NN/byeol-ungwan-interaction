@@ -51,6 +51,11 @@
   background-size: cover;
   background-position: center;
 }
+/* type C: 별운관 책상 화면(#5~#17). .bg-room과 함께 써서 크기·위치(cover, center)는 그대로 쓰고 이미지만 바꾼다.
+   책상 이미지를 불러오지 못하면 아래에 깔린 기존 운세소 배경이 보인다 */
+.bg-desk {
+  background-image: url('../images/fortune-desk-bg.png'), url('../assets/bg-oracle-room.png');
+}
 
 /* ---------- 대사/선택 버튼 ---------- */
 .dialogue-box {
@@ -77,6 +82,29 @@
   transform: translateY(0);
   pointer-events: auto;
 }
+/* 누른 뒤 disabled가 된 버튼도 숨김 상태면 완전히 사라지게 (.btn:disabled의 opacity 0.4가 이기지 않도록) */
+.btn.reveal-btn:not(.revealed) {
+  opacity: 0;
+}
+/* 책상 배경 위에서 잘 보여야 하는 버튼: 흰 글씨 + 흰 테두리 + 반투명 어두운 바탕 (.corner-btn과 같은 바탕).
+   글씨만 희면 밝은 책상에 묻히므로 바탕을 꼭 같이 깐다. 필요한 버튼에만 class="btn btn-light"로 붙인다 */
+.btn.btn-light {
+  color: #fff;
+  border-color: rgba(255,255,255,0.75);
+  background: rgba(0,0,0,0.4);
+  text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+}
+.btn.btn-light:active {
+  background: var(--color-fg);
+  color: #000;
+  text-shadow: none;
+}
+/* 책상 배경 위의 흰 안내 문구 (그림자로 밝은 부분에서도 글자 윤곽을 잡아 준다) */
+.text-light {
+  color: #fff;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.75), 0 0 14px rgba(0,0,0,0.5);
+}
+
 /* 선택지가 뜰 때 배경을 살짝 어둡게+흐리게 (스펙 명시 사항) */
 .dim-on-reveal::before {
   content: "";
@@ -211,7 +239,7 @@
 
 /* 종이가 스크린 위쪽 끝에 맞닿은 채로 내려오는 연출 (top:0 고정, 수평 중앙은 translateX로 유지) */
 .paper-drop {
-  animation: paperDrop 1.3s cubic-bezier(.22,.61,.36,1) both;
+  animation: paperDrop 1.6s cubic-bezier(.22,.61,.36,1) both;
 }
 @keyframes paperDrop {
   from { transform: translate(-50%, -100%); opacity: 0; }
@@ -219,7 +247,7 @@
 }
 /* 건넨다 클릭 시 종이가 다시 위로 올라가는 연출 */
 .paper-rise {
-  animation: paperRise 0.9s cubic-bezier(.4,0,.7,1) both;
+  animation: paperRise 1.4s cubic-bezier(.4,0,.7,1) both;
 }
 @keyframes paperRise {
   from { transform: translate(-50%, 0%); opacity: 1; }

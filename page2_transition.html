@@ -10,29 +10,30 @@
   <script src="js/fit-screen.js"></script>
   <script src="js/nav.js"></script>
   <script src="js/ambient.js"></script>
+  <script src="js/timeline.js"></script>
   <div class="screen bg-fade" id="screen">
     <div class="page-index">#2 page2_transition</div>
   </div>
 
   <script>
-    // 임시 구현: 실제로는 상단 스크린 연출이 끝나는 신호(WebSocket)로 대체될 자리
-    const WAIT_DURATION = 16000;
+    // 시각은 영상 02의 재생 시각(ms). 값은 js/timeline.js의 TIMELINE.page2에서 조절한다.
+    // Unity와 연결되어 있으면 영상 02가 실제로 시작된 시점을 기준으로 진행하고, 아니면 자체 타이머로 진행한다.
+    const T = TIMELINE.page2;
+    const clock = UnitySync.clock(T.video, T.fallback);
+    const FADE = 1200;           // #3으로 넘어가는 페이드 길이
 
     showScreenNotes([
-      { at: 0, text: '카메라가 아래로 내려가는 듯한 효과와 함께, 관람객이 누른 문이 스크린에 나타남' },
-      { at: 3000, text: '문을 덮고 있던 천이 걷힘' },
-      { at: 6000, text: '문이 열리며 카메라가 문 쪽으로 살짝 다가감' },
-      { at: 9500, text: '문 너머 우주로 슉 진입' },
-      { at: 13000, text: '우주 공간 도착 (여유 구간, 다음 장면으로 이어짐)' },
-      { at: WAIT_DURATION, text: '태블릿 #3으로 전환' },
-    ], { total: WAIT_DURATION + 1200 });
+      { at: clock.sceneStart, text: '스크린 연출 시작 (카메라가 아래로 내려가는 듯한 효과)' },
+      { at: T.doorAt, text: '관람객이 누른 문이 스크린에 나타남' },
+      { at: T.clothAt, text: '문을 덮고 있던 천이 걷히고, 문이 열리기 시작' },
+      { at: T.openAt, text: '문이 완전히 열림. 카메라가 문 쪽으로 다가감' },
+      { at: T.spaceAt, text: '문 너머 우주 공간으로 진입 · 태블릿 #3으로 전환' },
+    ], { videoStart: clock.sceneStart, total: T.spaceAt + FADE });
 
     lockInput();
     spawnHaze(document.getElementById('screen'), 28);
 
-    setTimeout(() => {
-      goTo('page3_guide_intro.html', 1200);
-    }, WAIT_DURATION);
+    clock.at(T.spaceAt).then(() => goTo('page3_guide_intro.html', FADE));
   </script>
 </body>
 </html>

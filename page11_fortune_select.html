@@ -129,28 +129,33 @@
   <script src="js/fit-screen.js"></script>
   <script src="js/nav.js"></script>
   <script src="js/ambient.js"></script>
-  <div class="screen bg-room" id="screen">
+  <script src="js/timeline.js"></script>
+  <div class="screen bg-room bg-desk" id="screen">
     <div class="room-shade"></div>
     <div class="fortune-cards">
       <div class="card-slot-1">
-        <div class="card-object card-shape-1" data-period="today">오늘의 운세</div>
+        <div class="card-object card-shape-1" data-period="today">오늘의 별의 이야기</div>
       </div>
-      <div class="card-object fortune-card" data-period="month">이달의 운세</div>
+      <div class="card-object fortune-card" data-period="month">이달의 별의 이야기</div>
       <div class="card-slot-3">
-        <div class="card-object card-shape-3" data-period="year">올해의 운세</div>
+        <div class="card-object card-shape-3" data-period="year">올해의 별의 이야기</div>
       </div>
     </div>
-    <div class="subtitle select-caption">듣고 싶은 이야기의 시기를 선택해 주세요</div>
+    <div class="subtitle text-light select-caption">듣고 싶은 이야기의 시기를 선택해 주세요</div>
     <div class="page-index">#11 page11_fortune_select</div>
   </div>
 
   <script>
     // 타이밍 (단위: ms) - 스크린 영상이 나오면 이 값들만 영상에 맞추면 된다.
     const FLING_AT = 900;      // 스크린: 모았던 손을 화면 아래쪽으로 뿌리듯 펼치기 시작
-    const DROP_AT = 2200;      // 안개가 화면 아래로 뿌려지는 순간: 태블릿이 밝아지며 카드 3장이 내려옴
+    const DROP_AT = 1700;      // 안개가 화면 아래로 뿌려지는 순간: 태블릿이 밝아지며 카드 3장이 내려옴 (시연 후 0.5초 앞당김, 예전 2200)
     const DROP_MS = 1540;      // 카드 3장이 다 내려오는 시간 (1.3초 + 마지막 카드 시차 0.24초)
     const CAPTION_DELAY = 400; // 카드가 다 내려온 뒤 안내 문구가 뜨기까지
     const CAPTION_AT = DROP_AT + DROP_MS + CAPTION_DELAY;
+
+    // 카드 선택은 Unity가 영상 14(시기 선택 대기 루프)에 들어간 뒤부터 (js/timeline.js의 TIMELINE.page11)
+    const T = TIMELINE.page11;
+    const clock = UnitySync.clock(T.video, T.fallback);
 
     const screenEl = document.getElementById('screen');
     // #12의 '뒤로가기' 버튼으로 돌아온 경우에만 선택 화면부터 (테스트 도구의 '← 이전'은 처음부터)
@@ -160,16 +165,21 @@
     } else {
       lockInput();
       setTimeout(() => screenEl.classList.add('phase-drop'), DROP_AT);
-      setTimeout(() => {
+      Promise.all([new Promise((r) => setTimeout(r, CAPTION_AT)), clock.reach(14)]).then(() => {
         screenEl.classList.add('phase-ready');
         unlockInput();
-      }, CAPTION_AT);
+      });
     }
 
-    // 카드 선택: 고른 시기를 저장해 두고 #12로
+    // 카드 선택: 고른 시기를 저장해 두고 #12로. Unity에는 period(영상 14 → 15)를 보낸다
+    // (#12에서 뒤로 와서 다시 고른 경우 Unity는 이미 지나간 명령으로 보고 무시하므로 영상은 그대로)
+    let picked = false;
     document.querySelectorAll('.fortune-cards [data-period]').forEach((card) => {
       card.addEventListener('click', () => {
+        if (picked) return;
+        picked = true;
         try { sessionStorage.setItem('fortunePeriod', card.dataset.period); } catch (e) {}
+        sendUnityAction('period');
         lockInput();
         goTo('page12_keyword_select.html');
       });
@@ -181,7 +191,7 @@
     else showScreenNotes([
       { at: -900, text: '(#10에서 버튼 직후) 점술가가 손바닥 위에 띄워둔 카드를 움켜쥐듯 손을 한 번 모음' },
       { at: FLING_AT, text: '모은 손을 화면 아래쪽을 향해 한 손으로 뿌리듯 스르륵 펼침. 손 안의 카드는 자연스럽게 사라져 있고, 뿌려지는 것은 신비한 안개' },
-      { at: DROP_AT, text: '안개가 화면 아래로 뿌려짐 · 태블릿: 밝아지며 위에서 카드 3장(오늘/이달/올해의 운세)이 내려옴' },
+      { at: DROP_AT, text: '안개가 화면 아래로 뿌려짐 · 태블릿: 밝아지며 위에서 카드 3장(오늘/이달/올해의 별의 이야기)이 내려옴' },
       { at: CAPTION_AT, text: '점술가가 양손을 다시 모았다가 어깨 너비로 쭉 펼침. 그 사이에서 별자리·별빛이 안개와 함께 깜빡이며 빛남 · 태블릿: "듣고 싶은 이야기의 시기를 선택해 주세요" 안내가 뜨고 카드 선택 가능' },
       { at: CAPTION_AT + 2500, text: '루프: 펼친 손 사이에서 별자리·별빛이 반짝임. 관람객이 카드를 고를 때까지 반복 (고르면 #12로)' },
     ], { total: CAPTION_AT, waitInput: true });

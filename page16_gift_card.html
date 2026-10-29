@@ -9,13 +9,13 @@
   /*
     스크린: 점술가가 자세를 바꿔 공손히 인사하는 시늉을 하며 작별 → 나래이션 3줄
             → 나래이션 중 두 손 위에 카드를 하나 만들어 화면 아래로 내려보냄 → 작별 루프
-    태블릿: (#15의 총정리가 사라진 책상에서 끊김 없이 이어짐) 살짝 어두워지며 자막, 입력 잠금
-            → 스크린의 카드가 내려오는 타이밍에 맞춰 위에서 카드가 내려옴
-            → 나래이션이 끝나면 밝아지며 '결과 카드 확인하기' 버튼 → #17
+    태블릿: (#15의 총정리가 사라진 어두운 책상에서 끊김 없이 이어짐) 어두운 책상 위로 바로 자막, 입력 잠금
+            → 세 대사가 끝난 뒤 씬 약 18초에 위에서 QR 결과 카드가 내려옴
+            → Unity가 영상 22(대기 루프)에 들어가면 밝아지며 '결과 카드 확인하기' 버튼 → #17
   */
-  .room-shade { opacity: 0; transition: opacity 1.2s ease-in-out; }
-  .phase-dim .room-shade { opacity: 0.5; }
-  .phase-ready .room-shade { opacity: 0; transition-duration: 1.5s; }
+  /* #15의 어두운 책상(0.55)에서 바로 이어진다 (예전: 밝은 책상에서 0.1초 뒤 1.2초에 걸쳐 어두워짐) */
+  .room-shade { opacity: 0.55; transition: opacity 1.5s ease-in-out; }
+  .phase-ready .room-shade { opacity: 0; }
 
   .card-stack {
     position: relative;
@@ -43,51 +43,52 @@
   <script src="js/fit-screen.js"></script>
   <script src="js/nav.js"></script>
   <script src="js/ambient.js"></script>
+  <script src="js/timeline.js"></script>
   <script src="js/subtitles.js"></script>
-  <div class="screen bg-room" id="screen">
+  <div class="screen bg-room bg-desk" id="screen">
     <div class="room-shade"></div>
     <div class="card-stack">
       <div class="card-object" id="card" style="width:340px; height:480px; margin-bottom:56px;"></div>
-      <button class="btn reveal-btn" id="resultBtn">결과 카드 확인하기</button>
+      <button class="btn btn-light reveal-btn" id="resultBtn">결과 카드 확인하기</button>
     </div>
     <div class="guide-subtitle" id="subtitle"></div>
     <div class="page-index">#16 page16_gift_card</div>
   </div>
 
   <script>
-    // 타이밍 (단위: ms) - 스크린 영상이 나오면 이 값들만 영상에 맞추면 된다.
-    const DIM_AT = 100;          // #15에서 이어지자마자 살짝 어두워짐
-    const TALK_AT = 1500;        // 점술가가 인사하는 시늉을 시작한 뒤 나래이션 시작
-    const CARD_SEND_DELAY = 1800; // 세 번째 대사가 시작되고 점술가가 카드를 화면 아래로 내려보내 태블릿에 닿기까지
-    const READY_DELAY = 300;     // 나래이션이 끝난 뒤 밝아지며 버튼이 뜨기까지
+    // 시각은 영상 21(QR 도입)의 재생 시각(ms). 값과 자막은 js/timeline.js의 TIMELINE.page16에서 조절한다.
+    // '결과 카드 확인하기'는 나래이션이 끝나고 Unity가 영상 22(대기 루프)에 들어간 뒤에 뜬다. 이 버튼은 Unity에 명령을 보내지 않는다
+    const T = TIMELINE.page16;
+    const clock = UnitySync.clock(T.video, T.fallback);
 
     // 점술가 나래이션 (두 번째 대사 동안 두 손 위에 카드를 만들고, 세 번째 대사에서 아래로 내려보낸다)
-    const LINES = [
-      { text: '이제 돌아갈 시간이 된 것 같군요.', hold: 3000, gap: 700 },
-      { text: '오늘 이 뜻밖의 만남이 즐거우셨길 바랍니다.', hold: 3600, gap: 700 },
-      { text: '가시는 길에, 당신의 별이 들려준 이야기를 간직해 보세요.', hold: 4200, gap: 0 },
-    ];
-    const schedule = subtitleSchedule(LINES, TALK_AT);
-    const CARD_MAKE_AT = schedule.starts[1];                    // 스크린: 두 손 위에 카드를 만들기 시작
-    const CARD_DROP_AT = schedule.starts[2] + CARD_SEND_DELAY;  // 태블릿: 위에서 카드가 내려옴
-    const READY_AT = schedule.end + READY_DELAY;
+    const LINES = T.lines;
+    const CARD_MAKE_AT = LINES[1].at;       // 스크린: 두 손 위에 카드를 만들기 시작
+    const CARD_DROP_AT = T.cardDropAt;      // 태블릿: 세 대사가 다 사라진 뒤 위에서 카드가 내려옴
+    const CARD_DROP_MS = 1200;              // oracle.css cardDrop
+    const READY_AT = Math.max(LINES[LINES.length - 1].out + SUBTITLE_FADE, CARD_DROP_AT + CARD_DROP_MS) + T.readyDelay;   // (Unity 없이) 버튼이 뜨는 시각
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
     lockInput();
     const screenEl = document.getElementById('screen');
     const card = document.getElementById('card');
     const btn = document.getElementById('resultBtn');
-    setTimeout(() => screenEl.classList.add('phase-dim'), DIM_AT);
-    setTimeout(() => playSubtitles(document.getElementById('subtitle'), LINES), TALK_AT);
-    setTimeout(() => card.classList.add('card-drop'), CARD_DROP_AT);
-    setTimeout(() => {
-      screenEl.classList.remove('phase-dim');
-      screenEl.classList.add('phase-ready');
-      btn.classList.add('revealed');
-      unlockInput();
-    }, READY_AT);
+    const dropped = clock.at(CARD_DROP_AT).then(() => {
+      card.classList.add('card-drop');
+      return wait(CARD_DROP_MS);
+    });
+    playSubtitlesAt(document.getElementById('subtitle'), LINES, clock)
+      .then(() => Promise.all([dropped, wait(T.readyDelay), clock.reach(22)]))
+      .then(() => {
+        screenEl.classList.remove('phase-dim');
+        screenEl.classList.add('phase-ready');
+        btn.classList.add('revealed');
+        unlockInput();
+      });
 
     // 결과 카드 확인하기: 버튼은 스르륵 사라지고, 같은 책상·같은 카드 그대로 #17로 끊김 없이 이어진다 (#17에서 카드가 뒤집힘)
     btn.addEventListener('click', () => {
+      if (btn.disabled) return;
       btn.disabled = true;
       btn.classList.remove('revealed');
       lockInput();
@@ -95,14 +96,13 @@
     });
 
     showScreenNotes([
-      { at: -1200, text: '(#15에서 "다음" 직후) 손을 내리고 있던 점술가가 자세를 살짝 바꿈 · 태블릿: 총정리 화면이 스르륵 사라짐' },
-      { at: 0, text: '점술가가 공손하게 인사하는 듯한 시늉을 하며 관람객과 작별 · 태블릿: 살짝 어두워지고 입력 잠금' },
-      { at: schedule.starts[0], text: '점술가 나래이션: "' + LINES[0].text + '" · 태블릿: 자막' },
-      { at: CARD_MAKE_AT, text: '점술가 나래이션: "' + LINES[1].text + '" · 말하면서 두 손 위에 카드를 하나 만들어 냄' },
-      { at: schedule.starts[2], text: '점술가 나래이션: "' + LINES[2].text + '" · 만든 카드를 화면 아래로 내려보냄' },
-      { at: CARD_DROP_AT, text: '카드가 화면 아래로 빠져나감 · 태블릿: 위에서 카드가 내려옴' },
-      { at: READY_AT, text: '작별 인사 후 대기 루프. 관람객이 버튼을 누를 때까지 반복 (누르면 #17로) · 태블릿: 밝아지며 "결과 카드 확인하기" 버튼' },
-    ], { total: READY_AT, waitInput: true });
+      { at: -650, text: '(#15에서 "다음" 직후, 영상 21) 손을 내리고 있던 점술가가 자세를 살짝 바꿈 · 태블릿: 총정리 화면이 스르륵 사라짐' },
+      { at: clock.sceneStart, text: '점술가가 공손하게 인사하는 듯한 시늉을 하며 관람객과 작별 · 태블릿: 어두운 책상 그대로, 입력 잠금' },
+      ...cueNotes(LINES, '점술가 나래이션').map((n, i) => ({ at: n.at, text: n.text + [' · 태블릿: 자막', ' · 말하면서 두 손 위에 카드를 하나 만들어 냄', ' · 만든 카드를 화면 아래로 내려보냄'][i] })),
+      { at: CARD_DROP_AT, text: '카드가 화면 아래로 빠져나감 · 태블릿: 위에서 QR 결과 카드가 내려옴 (씬 약 18초)' },
+      { at: clock.noteTime(22, 0), text: '영상 22: 작별 대기 루프 (영상 21이 끝난 뒤)' },
+      { at: READY_AT, text: '태블릿: 나래이션이 끝나고 영상 22가 시작돼 있으면 밝아지며 "결과 카드 확인하기" 버튼 (누르면 #17, 영상은 그대로)' },
+    ], { videoStart: clock.sceneStart, total: READY_AT, waitInput: true });
   </script>
 </body>
 </html>

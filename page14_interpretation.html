@@ -8,9 +8,19 @@
 <style>
   /*
     스크린: #13의 해석 연출이 마무리되어, 고른 운세에 따라 달라진 별자리 주변의 색·밝기·움직임이 더 선명하게 보이는 루프
-    태블릿: (#13의 별빛이 사라진 책상에서 끊김 없이 이어짐) 해석 결과가 차례로 나타남
+    태블릿: (#13의 별빛이 사라진 책상에서 끊김 없이 이어짐) 책상이 어두워지며 해석 결과가 흰 글씨로 차례로 나타남
             → 상세 해석 펼쳐보기 → '다른 이야기 듣기'(#12) 또는 '이야기 마치기'(#15)
   */
+  /* 다른 장면과 같은 .room-shade 막으로 책상을 어둡게. 결과가 사라져도(이야기 마치기) 어두운 채 #15로 이어진다 */
+  .room-shade { opacity: 0; transition: opacity 1.2s ease-in-out; }
+  .phase-dim .room-shade { opacity: 0.55; }
+
+  /* 어두운 책상 위의 흰 글씨 (제목·결과 문장·상세 해석·펼침 표시) */
+  .result-wrap .title,
+  .result-wrap .subtitle,
+  .chevron-btn,
+  .detail-card { color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,0.75), 0 0 14px rgba(0,0,0,0.5); }
+
   .result-wrap > * {
     opacity: 0;
     transform: translateY(14px);
@@ -42,7 +52,7 @@
   .chevron-btn {
     margin: 10px 0 28px;
     font-size: 16px;
-    color: var(--color-muted);
+    color: #fff;
     cursor: pointer;
   }
   .detail-card {
@@ -51,7 +61,6 @@
     overflow: hidden;
     background: linear-gradient(180deg, #3a3a3a 0%, #8a8a8a 100%);
     border-radius: 0 0 8px 8px;
-    color: #262626;
     font-size: 18px;
     line-height: 1.8;
     transition: max-height 0.7s cubic-bezier(.22,.61,.36,1);
@@ -74,7 +83,8 @@
   <script src="js/fit-screen.js"></script>
   <script src="js/nav.js"></script>
   <script src="js/ambient.js"></script>
-  <div class="screen bg-room" id="screen">
+  <div class="screen bg-room bg-desk" id="screen">
+    <div class="room-shade"></div>
     <div class="result-wrap">
       <div class="title" id="resultTitle" style="font-size:30px; font-family:'KoPub Batang Medium', 'Malgun Gothic', sans-serif;">올해의 관계운</div>
       <div class="subtitle" style="max-width:1100px; text-align:center; font-family:'KoPub Batang Medium', 'Malgun Gothic', sans-serif;">
@@ -85,8 +95,8 @@
       <div class="detail-card" id="detailCard"><div class="inner">상세 해석</div></div>
       <div class="chevron-btn" id="chevron">⌄</div>
       <div style="display:flex; gap:40px; margin-top:56px;">
-        <button class="btn" id="otherBtn">다른 이야기 듣기</button>
-        <button class="btn" id="finishBtn">이야기 마치기</button>
+        <button class="btn btn-light" id="otherBtn">다른 이야기 듣기</button>
+        <button class="btn btn-light" id="finishBtn">이야기 마치기</button>
       </div>
     </div>
     <div class="page-index">#14 page14_interpretation</div>
@@ -107,7 +117,7 @@
 
     lockInput();
     const screenEl = document.getElementById('screen');
-    setTimeout(() => screenEl.classList.add('phase-show'), SHOW_AT);
+    setTimeout(() => screenEl.classList.add('phase-dim', 'phase-show'), SHOW_AT);
     setTimeout(unlockInput, UNLOCK_AT);
 
     function toggleDetail() {
@@ -122,14 +132,19 @@
     document.getElementById('otherBtn').addEventListener('click', () => { lockInput(); goTo('page12_keyword_select.html'); });
     // 이야기 마치기: 화면 위 요소가 스르륵 사라지고, 같은 책상 그대로 #15로 끊김 없이 이어진다
     const FINISH_FADE_MS = 900;
+    // ('다른 이야기 듣기'는 영상 18 대기 루프를 그대로 두고 웹만 #12로 돌아가므로 Unity에 보내지 않는다)
+    let finished = false;
     document.getElementById('finishBtn').addEventListener('click', () => {
+      if (inputLocked || finished) return;
+      finished = true;
+      sendUnityAction('finish');   // 영상 18 → 19 (한 번만)
       lockInput();
       screenEl.classList.remove('phase-show');
       setTimeout(() => goToInPlace('page15_dashboard.html'), FINISH_FADE_MS);
     });
 
     showScreenNotes([
-      { at: 0, text: '해석 완료: 관람객이 고른 운세(시기·주제)에 따라 달라진 별자리 주변의 색·밝기·움직임이 #13보다 더 선명하게 보임 · 태블릿: 해석 결과가 차례로 나타남' },
+      { at: 0, text: '해석 완료: 관람객이 고른 운세(시기·주제)에 따라 달라진 별자리 주변의 색·밝기·움직임이 #13보다 더 선명하게 보임 · 태블릿: 책상이 어두워지며 해석 결과가 차례로 나타남' },
       { at: UNLOCK_AT, text: '같은 선명한 상태로 루프. 관람객이 상세 해석을 보고 버튼을 누를 때까지 반복 ("다른 이야기 듣기" → #12, "이야기 마치기" → #15)' },
     ], { total: UNLOCK_AT, waitInput: true });
   </script>

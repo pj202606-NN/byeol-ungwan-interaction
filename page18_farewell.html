@@ -7,9 +7,12 @@
 <link rel="stylesheet" href="css/oracle.css">
 <style>
   /*
-    스크린: 점술가가 처음 별운관에 들어왔을 때의 자세 그대로 반듯하게 앉아 마지막 인사 (나래이션 2줄)
+    스크린: 점술가가 처음 별운관에 들어왔을 때의 자세 그대로 반듯하게 앉아 마지막 인사 (나래이션 4줄)
     태블릿: (#17의 책상·카드에서 끊김 없이 이어짐) 입력 잠금, 카드(QR)가 먼저 깔끔하게 사라진 뒤 책상이 천천히 어둠에 잠기고
-            초반 장면처럼 연기와 흐릿한 파티클이 은은하게 떠오름 → 자동으로 #19
+            초반 장면처럼 연기와 흐릿한 파티클이 은은하게 떠오름
+            → 영상 23의 15초에 태블릿 전용 영상(videos/outro-tablet.mp4)이 화면 전체에 재생됨 (음소거, 1회)
+            → 영상 23이 끝나 Unity가 01로 돌아오면 태블릿 영상을 멈추고 #1로
+            (태블릿 영상을 재생하지 못하면 예전처럼 씬 약 16초에 #19 → #22 → #1)
   */
   /* #17의 카드(QR 면)와 같은 자리 */
   .farewell-card {
@@ -54,38 +57,56 @@
     right: 0;
     bottom: 120px;
     margin: 0 auto;
-    z-index: 5;
+    z-index: 6;
   }
+  /* 태블릿 전용 퇴장 영상: 화면 전체, 원본 비율 유지(남는 곳은 검정), 컨트롤·재생 버튼 없음, 터치 통과 */
+  .tablet-video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: #000;
+    z-index: 5;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 1s ease;
+  }
+  .phase-video .tablet-video { opacity: 1; }
+  .tablet-video::-webkit-media-controls,
+  .tablet-video::-webkit-media-controls-start-playback-button,
+  .tablet-video::-webkit-media-controls-overlay-play-button { display: none !important; -webkit-appearance: none; }
 </style>
 </head>
 <body>
   <script src="js/fit-screen.js"></script>
   <script src="js/nav.js"></script>
   <script src="js/ambient.js"></script>
+  <script src="js/timeline.js"></script>
   <script src="js/subtitles.js"></script>
-  <div class="screen bg-room" id="screen">
+  <div class="screen bg-room bg-desk" id="screen">
     <div class="card-object farewell-card"><div class="qr-box">QR코드 이미지</div></div>
     <div class="room-shade"></div>
     <div class="ambient-field" id="field">
       <div class="milky-band"></div>
     </div>
+    <video class="tablet-video" id="tabletVideo" src="videos/outro-tablet.mp4" muted playsinline preload="auto"
+           disablepictureinpicture disableremoteplayback></video>
     <div class="guide-subtitle" id="subtitle"></div>
     <div class="page-index">#18 page18_farewell</div>
   </div>
 
   <script>
-    // 타이밍 (단위: ms) - 스크린 영상이 나오면 이 값들만 영상에 맞추면 된다.
+    // 시각은 영상 23(퇴장)의 재생 시각(ms). 값과 자막은 js/timeline.js의 TIMELINE.page18에서 조절한다.
+    // 영상 23이 끝나 Unity가 01로 돌아가면 웹도 #1로 돌아간다 (js/nav.js의 UnitySync, #22 참고)
+    const T = TIMELINE.page18;
+    const clock = UnitySync.clock(T.video, T.fallback);
     const CARD_OUT_AT = 300;   // 카드(QR)가 먼저 사라짐 (1.2초)
     const DARK_AT = 1500;      // 카드가 사라진 뒤 책상이 천천히 어두워지기 시작 (약 12초에 걸쳐)
-    const TALK_AT = 1200;      // 점술가의 마지막 인사 시작
-    const END_DELAY = 800;     // 인사가 끝난 뒤 #19로 넘어가기까지
 
-    const LINES = [
-      { text: '당신의 하루는 계속해서 이어지겠지요.', hold: 3200, gap: 800 },
-      { text: '다음번의 만남을 고대하고 있겠습니다.', hold: 3400, gap: 0 },
-    ];
-    const schedule = subtitleSchedule(LINES, TALK_AT);
-    const NEXT_AT = schedule.end + END_DELAY;
+    const LINES = T.lines;
+    const VIDEO_AT = T.tabletVideoAt;   // 영상 23의 15초: 태블릿 전용 영상 시작
+    const NEXT_AT = T.exitAt;           // 태블릿 영상을 재생하지 못했을 때만 이 시각에 예전 퇴장 연출(#19)로
 
     lockInput();
     const screenEl = document.getElementById('screen');
@@ -94,16 +115,80 @@
     spawnHaze(field, 30);
     setTimeout(() => screenEl.classList.add('phase-card-out'), CARD_OUT_AT);
     setTimeout(() => screenEl.classList.add('phase-dark'), DARK_AT);
-    setTimeout(() => playSubtitles(document.getElementById('subtitle'), LINES), TALK_AT);
-    setTimeout(() => goToInPlace('page19_pullback.html', { crossfade: 1200 }), NEXT_AT);
+    playSubtitlesAt(document.getElementById('subtitle'), LINES, clock);
 
+    // ---------- 태블릿 전용 퇴장 영상 ----------
+    // Unity와 연결되어 있으면 영상 23의 재생 시각이 VIDEO_AT에 이른 순간, 연결이 없으면 #18 진입 후 VIDEO_AT에 재생한다.
+    // 음소거·1회 재생. 영상 23이 끝나 Unity가 01로 돌아오면 바로 멈추고 비운 뒤 #1로 (다음 관람객에게 재생 상태가 남지 않게)
+    const video = document.getElementById('tabletVideo');
+    const sceneT0 = performance.now();
+    video.muted = true;
+    video.loop = false;
+    let videoState = 'wait';   // wait → playing → stopped (또는 failed)
+    // 재생이 시작됐는지(true) 못 했는지(false). play()는 영상을 받는 동안 시간이 걸리므로 결과가 나올 때까지 기다린다
+    let settleVideo;
+    const videoStarted = new Promise((r) => { settleVideo = r; });
+    function stopVideo() {
+      if (videoState === 'stopped') return;
+      videoState = 'stopped';
+      video.pause();
+      video.removeAttribute('src');
+      video.load();   // 받아 둔 영상과 재생 위치를 비운다
+      console.info('[#18] 태블릿 영상 정지·초기화');
+    }
+    function startVideo() {
+      if (videoState !== 'wait') return;
+      video.currentTime = 0;
+      video.play().then(() => {
+        if (videoState !== 'wait') { video.pause(); return; }
+        videoState = 'playing';
+        settleVideo(true);
+        screenEl.classList.add('phase-video');
+        const s = UnitySync.state();
+        console.info('[#18] 태블릿 영상 재생 시작 ·', s ? 'Unity 영상 ' + s.video + ' ' + s.time.toFixed(2) + '초' : '#18 진입 후 ' + ((performance.now() - sceneT0) / 1000).toFixed(2) + '초');
+      }).catch((err) => {
+        if (videoState !== 'wait') return;   // 이미 멈춘 뒤(#1로 돌아가는 중)라면 실패가 아니다
+        videoState = 'failed';
+        settleVideo(false);
+        console.error('[#18] 태블릿 영상을 재생하지 못함 → 예전 퇴장 연출(#19~#22)로 진행', err);
+      });
+    }
+    video.addEventListener('error', () => {
+      if (videoState === 'stopped') return;
+      if (videoState === 'wait') { videoState = 'failed'; settleVideo(false); }
+      console.error('[#18] 태블릿 영상을 불러오지 못함:', video.error && video.error.message);
+    });
+    UnitySync.ready(() => {
+      (UnitySync.connected() ? clock.at(VIDEO_AT) : subtitleWait(VIDEO_AT - (performance.now() - sceneT0))).then(startVideo);
+    });
+    // 1회 재생이 끝나면: Unity와 연결되어 있으면 01로 돌아올 때까지 마지막 화면(검정)을 유지, 연결이 없으면 바로 #1로
+    video.addEventListener('ended', () => {
+      if (!UnitySync.connected()) returnHome();
+    });
+    function returnHome() {
+      stopVideo();
+      returnToDoor();
+    }
+    // 영상 23이 끝나 Unity가 01로 돌아옴 (js/nav.js의 UnitySync) → 영상을 즉시 멈추고 #1로
+    UnitySync.onReturnToStart(returnHome);
+    window.addEventListener('pagehide', stopVideo);
+    // 태블릿 영상이 없거나 재생하지 못했을 때는 예전처럼 #19(별운관 밖으로 역방향 이동) → #22 → #1
+    // (NEXT_AT에 아직 play()가 진행 중이면 그 결과를 기다린다)
+    clock.at(NEXT_AT).then(() => videoStarted).then((ok) => {
+      if (ok || videoState === 'stopped') return;
+      stopVideo();
+      goToInPlace('page19_pullback.html', { crossfade: 1200 });
+    });
+
+    const t0 = clock.sceneStart;
     showScreenNotes([
-      { at: -1000, text: '(#17에서 "떠나기" 직후) 작별 대기 루프에서, 점술가가 처음 별운관에 들어왔을 때의 자세로 반듯하게 고쳐 앉음 · 태블릿: 문장과 버튼이 사라짐' },
-      { at: 0, text: '반듯하게 앉은 점술가 · 태블릿: 입력 잠금, 카드(QR)가 먼저 깔끔하게 사라짐' },
-      { at: DARK_AT, text: '태블릿: 책상이 아주 천천히 어둠에 잠기며 연기·파티클이 은은하게 떠오름' },
-      ...lineNotes(LINES, schedule, '점술가 마지막 인사'),
-      { at: NEXT_AT, text: '태블릿 #19로 이어짐' },
-    ], { total: NEXT_AT });
+      { at: t0 - 1000, text: '(#17에서 "떠나기" 직후, 영상 23) 작별 대기 루프에서, 점술가가 처음 별운관에 들어왔을 때의 자세로 반듯하게 고쳐 앉음 · 태블릿: 문장과 버튼이 사라짐' },
+      { at: t0, text: '반듯하게 앉은 점술가 · 태블릿: 입력 잠금, 카드(QR)가 먼저 깔끔하게 사라짐' },
+      { at: t0 + DARK_AT, text: '태블릿: 책상이 아주 천천히 어둠에 잠기며 연기·파티클이 은은하게 떠오름' },
+      ...cueNotes(LINES, '점술가 마지막 인사'),
+      { at: VIDEO_AT, text: '별운관 밖으로 역방향 이동 시작 · 태블릿: 태블릿 전용 영상이 화면 전체에 재생됨 (음소거, 1회)' },
+      { at: 42300, text: '영상 23 끝 → Unity 01 · 태블릿: 영상을 멈추고 #1로 (Unity 없이 테스트하면 태블릿 영상이 끝난 뒤)' },
+    ], { videoStart: t0, total: 42300 });
   </script>
 </body>
 </html>

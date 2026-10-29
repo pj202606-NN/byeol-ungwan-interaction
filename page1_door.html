@@ -6,21 +6,53 @@
 <link rel="stylesheet" href="css/wireframe.css">
 <link rel="stylesheet" href="css/oracle.css">
 <style>
+  /* 문 루프 영상 (videos/door-idle-tablet.mp4, 1280×720 = 16:9, 10초, 음소거·무한 반복).
+     화면(.screen 1920×1080)과 같은 16:9라 cover로 채워도 잘리는 곳이 없다.
+     불러오기 전에는 투명하게 두어 아래의 기존 배경(.bg-scene)이 보이고, 재생이 시작되면 서서히 나타난다.
+     터치는 통과시켜 문 클릭 영역(#door)을 가리지 않는다 */
+  .door-video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.6s ease;
+  }
+  .door-video.ready { opacity: 1; }
+  .door-video::-webkit-media-controls,
+  .door-video::-webkit-media-controls-start-playback-button,
+  .door-video::-webkit-media-controls-overlay-play-button { display: none !important; -webkit-appearance: none; }
+
+  /* 문 클릭 영역: 영상 속 문(천 포함) 위에 겹치는 투명한 영역. 영상의 문 위치가 바뀌면 이 값만 고친다
+     (영상 1280×720에서 문은 x 395~850, y 180~540 → 화면 1920×1080 기준 아래 값) */
   .door {
-    position: relative;
-    width: 260px;
-    height: 380px;
+    --door-left: 592px;
+    --door-top: 270px;
+    --door-w: 683px;
+    --door-h: 540px;
+    position: absolute;
+    left: var(--door-left);
+    top: var(--door-top);
+    width: var(--door-w);
+    height: var(--door-h);
     cursor: pointer;
+    z-index: 1;
   }
   .click-hint {
     position: absolute;
-    top: 50%;
-    left: 50%;
+    top: 58%;      /* 영상 속 문고리 높이 */
+    left: calc(50% + 10px);   /* 문 가운데에서 살짝 오른쪽 */
     width: 32px;
     height: 32px;
     margin: -16px 0 0 -16px;
-    border: 1px solid var(--color-muted);
+    /* 어두운 문 위에서도 잘 보이도록 옅은 백금색으로 채운다 */
+    background: rgba(236, 228, 206, 0.35);
+    border: 1px solid rgba(236, 228, 206, 0.85);
+    box-shadow: 0 0 10px rgba(236, 228, 206, 0.35);
     border-radius: 50%;
+    pointer-events: none;
     animation: hintPulse 1.8s ease-in-out infinite;
   }
   @keyframes hintPulse {
@@ -49,18 +81,10 @@
   .door-caption span.show {
     opacity: 1;
   }
-  /* #22에서 돌아올 때(?reveal): 시야가 내려오듯 문 화면이 아래에서 떠오르며, 검은 화면에서 천천히 밝아진다 */
-  @keyframes tiltIn {
-    from { transform: translateY(260px); }
-    to { transform: translateY(0); }
-  }
+  /* #18·#22에서 돌아올 때(?reveal): 문 화면은 제자리에 있고, 검은 화면이 걷히며 스르륵 밝아진다 */
   @keyframes revealFromDark {
     from { opacity: 1; }
     to { opacity: 0; }
-  }
-  .tilt-in .door,
-  .tilt-in .door-caption {
-    animation: tiltIn 2.4s cubic-bezier(.22,.61,.36,1) both;
   }
   .tilt-in::after {
     content: "";
@@ -69,7 +93,7 @@
     background: #000;
     pointer-events: none;
     z-index: 5;
-    animation: revealFromDark 2.4s ease-out both;
+    animation: revealFromDark 1.2s ease-out both;
   }
 </style>
 </head>
@@ -77,8 +101,9 @@
   <script src="js/fit-screen.js"></script>
   <script src="js/nav.js"></script>
   <div class="screen bg-scene" id="screen">
-    <div class="door placeholder" id="door">
-      문 이미지 (영상 연동 예정)
+    <video class="door-video" id="doorVideo" src="videos/door-idle-tablet.mp4" autoplay muted loop playsinline preload="auto"
+           disablepictureinpicture disableremoteplayback></video>
+    <div class="door" id="door">
       <div class="click-hint"></div>
     </div>
     <div class="door-caption">
@@ -93,12 +118,50 @@
     // #22에서 같은 문서로 이어져 온 경우 입력 잠금이 남아 있으므로 푼다
     if (typeof unlockInput === 'function') unlockInput();
 
+    // 새 체험의 시작: 이전 관람객의 입력·선택값을 지우고, 테스트 도구로 꺼 두었던 Unity 동기화를 다시 켠다
+    clearVisitData();
+    try { sessionStorage.removeItem('unitySyncOff'); } catch (e) {}
+    // 체험 도중에 태블릿을 새로 열었다면(새로고침 등) Unity는 아직 그 체험의 영상에 머물러 있으므로 처음(01)으로 돌린다.
+    // 퇴장 영상(23)은 끝나면 Unity가 알아서 01로 돌아오므로 그대로 둔다
+    UnitySync.ready(() => {
+      const s = UnitySync.state();
+      if (s && s.video !== 1 && s.video !== 23) {
+        console.info('[Unity sync] 웹은 처음 화면인데 Unity는 영상 ' + s.video + ' → reset');
+        sendUnityAction('reset');
+      }
+    });
+
     showScreenNotes([
       { at: 0, text: '루프 영상: 태블릿의 문과 같은 공간, 문 위로 펼쳐진 밤하늘. 별들이 회전하며 원형 궤적(일주운동처럼 여러 겹의 원형 선)을 그려 나감. 관람객이 문을 터치할 때까지 반복 → 터치하면 #2의 연출 시작' },
     ]);
 
+    // 문 루프 영상: 이 화면에 올 때마다(새로고침, #22·#18에서 돌아옴) 새 영상 요소로 처음부터 재생한다
+    const doorVideo = document.getElementById('doorVideo');
+    doorVideo.muted = true;
+    doorVideo.addEventListener('playing', () => doorVideo.classList.add('ready'), { once: true });
+    function playDoorVideo() {
+      return doorVideo.play().catch((err) => {
+        // 자동 재생이 막힌 경우: 기존 배경이 보이는 채로 두고, 처음 화면을 건드릴 때 다시 시도한다
+        console.warn('[#1] 문 루프 영상 자동 재생 실패 → 첫 터치 때 다시 시도', err);
+        document.addEventListener('pointerdown', () => { if (!doorOpened) doorVideo.play().catch(() => {}); }, { once: true });
+      });
+    }
+    playDoorVideo();
+    doorVideo.addEventListener('error', () => console.error('[#1] 문 루프 영상을 불러오지 못함 (기존 배경으로 진행):', doorVideo.error && doorVideo.error.message));
+    window.addEventListener('pagehide', () => doorVideo.pause());
+
+    // 문을 누르면 화면이 한 번에 검어지지 않고 DOOR_FADE 동안 스르륵 어두워진 뒤 #2로 (공용 전환 0.48초보다 길게, 이 장면만)
+    const DOOR_FADE = 1600;
+    let doorOpened = false;
     document.getElementById('door').addEventListener('click', () => {
-      goTo('page2_transition.html');
+      if (doorOpened) return;   // 페이드 아웃 중 다시 눌러도 한 번만
+      doorOpened = true;
+      sendUnityAction('door');
+      document.body.style.animationDuration = DOOR_FADE + 'ms';
+      document.body.style.animationTimingFunction = 'ease-in-out';
+      goTo('page2_transition.html', DOOR_FADE);
+      // 어두워지는 동안은 문 영상이 계속 움직이고, 다 어두워지면(다음 장면 시작) 문 루프를 멈춘다
+      setTimeout(() => doorVideo.pause(), DOOR_FADE - 50);
     });
 
     // 안내 문구 순환: 상호작용 없이 3.5초가 지나면 다음 문구로 바뀌고, 화면을 건드리면 첫 문구로 돌아간다

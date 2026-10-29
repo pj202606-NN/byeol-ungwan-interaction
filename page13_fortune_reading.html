@@ -58,7 +58,8 @@
   <script src="js/fit-screen.js"></script>
   <script src="js/nav.js"></script>
   <script src="js/ambient.js"></script>
-  <div class="screen bg-room" id="screen">
+  <script src="js/timeline.js"></script>
+  <div class="screen bg-room bg-desk" id="screen">
     <div class="room-shade"></div>
     <div class="star-field" id="field">
       <div class="core-glow"></div>
@@ -87,6 +88,10 @@
     function fetchFortune(p) {
       return new Promise((resolve) => setTimeout(() => resolve({ picks: p, fortune: null }), 300));
     }
+
+    // 영상 17(운세 공개)의 시각 (js/timeline.js의 TIMELINE.page13)
+    const T = TIMELINE.page13;
+    const clock = UnitySync.clock(T.video, T.fallback);
 
     lockInput();
     const screenEl = document.getElementById('screen');
@@ -138,8 +143,9 @@
       await wait(STARS_AT);
       screenEl.classList.add('phase-reading');
       fadeLevel(1, 2500);
-      // 데이터를 받고, 최소 연출 시간도 지나야 마무리로 넘어간다
-      await Promise.all([loading, wait(READING_MIN - STARS_AT)]);
+      // 데이터를 받고, 최소 연출 시간도 지나고, 영상 17도 끝 무렵(closingAt)이어야 마무리로 넘어간다
+      // → 마무리(2.2초)와 걷힘(1초) 뒤 #14가 영상 18(해석 대기 루프) 시작 즈음에 뜬다
+      await Promise.all([loading, wait(READING_MIN - STARS_AT), clock.at(T.closingAt)]);
       screenEl.classList.add('phase-closing');
       fadeLevel(2, 1800);
       await wait(CLOSING_MS);

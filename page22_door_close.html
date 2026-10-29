@@ -60,15 +60,24 @@
 
     const screenEl = document.getElementById('screen');
     setTimeout(() => screenEl.classList.add('phase-calm'), CALM_AT);
-    setTimeout(() => screenEl.classList.add('phase-up'), UP_AT);
     // #1은 ?reveal이면 시야가 내려오듯 문 화면이 아래에서 떠오르며 밝아진다 (그 뒤로는 평소의 #1과 같음)
-    setTimeout(() => goToInPlace('page1_door.html?reveal'), UP_AT + UP_MS);
+    let leaving = false;
+    function rise() {
+      if (leaving) return;
+      leaving = true;
+      screenEl.classList.add('phase-up');
+      setTimeout(() => goToInPlace('page1_door.html?reveal'), UP_MS);
+    }
+    // Unity와 연결되어 있으면 퇴장 영상(23)이 끝나 Unity가 01로 돌아온 순간에만 #1로 (그 전까지는 이 화면에 머문다).
+    // 연결되어 있지 않으면 예전처럼 UP_AT에. (#18~#21에서 Unity가 먼저 돌아오면 그 장면에서 바로 #1로 — js/nav.js)
+    UnitySync.onReturnToStart(rise);
+    setTimeout(() => { if (!UnitySync.connected()) rise(); }, UP_AT);
 
     showScreenNotes([
       { at: 0, text: '열려 있던 문이 닫힘 · 태블릿: 입력 잠금, 어두운 별빛' },
       { at: CLOTH_AT, text: '닫힌 문 위로 천이 다시 덮여, 처음과 완전히 같은 형태가 됨' },
       { at: CALM_AT, text: '분위기가 훨씬 잔잔해짐 (체험이 끝났음을 간접적으로 알림) · 태블릿: 별빛과 연기가 한층 옅어짐' },
-      { at: UP_AT, text: '카메라 시야가 문에서 위로 올라가 문 위의 밤하늘로 돌아감 → #1의 별 궤적 루프로 이어짐 · 태블릿: 별빛이 걷힘' },
+      { at: UP_AT, text: '카메라 시야가 문에서 위로 올라가 문 위의 밤하늘로 돌아감 → #1의 별 궤적 루프로 이어짐 · 태블릿: 별빛이 걷힘 (Unity와 연결되어 있으면 영상 23이 끝나 01로 돌아온 순간)' },
       { at: UP_AT + UP_MS, text: '태블릿: 시야가 내려오듯 #1의 문 화면이 아래에서 떠오르며 밝아짐 → 그대로 #1 (처음으로)' },
     ], { total: UP_AT + UP_MS });
   </script>

@@ -27,14 +27,43 @@
   .tag-column:nth-child(5) { animation-delay: 0.32s; }
   .tag-column:nth-child(6) { animation-delay: 0.4s; }
 
-  /* 선택한 카드: 천(긴 종이)처럼 윗부분은 화면 위에 붙은 채 길이만 늘어나 더 내려오고, 테두리가 밝게 빛난다 */
+  /* ---------- 키워드 종이 (images/keyword-paper.png 한 장을 6칸에 재사용, 1024×1536, 종이 밖은 투명) ----------
+     이미지 속 종이는 (398,27)~(647,1496) 부분(249×1469)이다. 그 부분만 칸에 꼭 맞게 보이도록 배경 크기·위치를
+     이미지 1px의 화면 크기(--kw-px) 단위로 맞추므로 비율은 원본 그대로 유지된다.
+     높이는 예전 칸과 같은 740px(--kw-h), 폭은 비율에 따라 약 125px, 칸 중심 사이 간격은 예전과 같은 246px.
+     칸(.tag-column) 자체가 종이 그림이라 터치·선택 판정과 글씨가 종이와 함께 움직인다.
+     예전 회색 칸의 배경·테두리·그림자(oracle.css)는 이 장면에서만 끈다 */
+  .tag-columns {
+    --kw-h: 740px;
+    --kw-px: calc(var(--kw-h) / 1469);
+    --kw-w: calc(var(--kw-px) * 249);
+    gap: calc(246px - var(--kw-w));
+  }
   .tag-column {
-    transition: height 0.45s cubic-bezier(.22,.61,.36,1), border-color 0.3s ease, box-shadow 0.3s ease;
+    width: var(--kw-w);
+    height: var(--kw-h);
+    background: url('images/keyword-paper.png') no-repeat;
+    background-size: calc(var(--kw-px) * 1024) calc(var(--kw-px) * 1536);
+    background-position: calc(var(--kw-px) * -398) calc(var(--kw-px) * -27);
+    border: none;
+    box-shadow: none;
+    filter: drop-shadow(0 4px 10px rgba(0,0,0,0.4));   /* 종이 윤곽을 따라 생기는 그림자 */
+    transform-origin: 50% 0;
+  }
+  .tag-label { color: #3b2c1e; }
+
+  /* 선택한 종이: 예전처럼 윗부분은 화면 위에 붙은 채 740 → 780px로 더 내려오고(scale, 비율 유지) 가장자리가 밝게 빛난다.
+     하나를 고르면 나머지 종이는 어두워져 차이가 분명히 보인다.
+     (등장·퇴장 애니메이션이 transform을 쓰므로, 겹치지 않는 scale 속성으로 늘린다) */
+  .tag-column {
+    transition: scale 0.45s cubic-bezier(.22,.61,.36,1), filter 0.3s ease;
   }
   .tag-column.selected {
-    height: 780px;
-    border-color: #fff;
-    box-shadow: 0 0 0 1px rgba(255,255,255,0.6), 0 0 22px rgba(255,255,255,0.45), 0 3px 8px rgba(0,0,0,0.16);
+    scale: calc(780 / 740);
+    filter: drop-shadow(0 0 5px rgba(255,255,255,0.95)) drop-shadow(0 0 18px rgba(255,240,205,0.6)) drop-shadow(0 4px 10px rgba(0,0,0,0.4));
+  }
+  .has-topic .tag-column:not(.selected) {
+    filter: drop-shadow(0 4px 10px rgba(0,0,0,0.4)) brightness(0.6);
   }
 
   /* 안내 문장과 해석 보기 버튼: 카드가 다 내려온 뒤 등장 */
@@ -97,7 +126,8 @@
   <script src="js/fit-screen.js"></script>
   <script src="js/nav.js"></script>
   <script src="js/ambient.js"></script>
-  <div class="screen bg-room" id="screen">
+  <script src="js/timeline.js"></script>
+  <div class="screen bg-room bg-desk" id="screen">
     <button class="corner-btn" id="backBtn">뒤로가기</button>
 
     <div class="tag-columns">
@@ -108,7 +138,7 @@
       <div class="tag-column" data-topic="학업"><span class="tag-label">학업</span></div>
       <div class="tag-column" data-topic="관계"><span class="tag-label">관계</span></div>
     </div>
-    <div class="subtitle topic-caption">듣고 싶은 이야기를 선택해 주세요.</div>
+    <div class="subtitle text-light topic-caption">듣고 싶은 이야기를 선택해 주세요.</div>
     <button class="btn" id="interpretBtn">해석 보기</button>
     <div class="page-index">#12 page12_keyword_select</div>
   </div>
@@ -117,12 +147,17 @@
     // 타이밍 (단위: ms)
     const READY_AT = 1900;   // 긴 카드 6장이 다 내려온 뒤(1.2초 + 마지막 카드 시차 0.4초) 안내 문장과 버튼 등장
 
+    // 안내 문장과 버튼은 Unity가 영상 16(키워드 선택 대기 루프)에 들어간 뒤에 (js/timeline.js의 TIMELINE.page12)
+    // #14의 '다른 이야기 듣기'로 다시 온 경우 Unity는 이미 그 뒤(영상 18)에 있으므로 바로 뜬다
+    const T = TIMELINE.page12;
+    const clock = UnitySync.clock(T.video, T.fallback);
+
     lockInput();
     const screenEl = document.getElementById('screen');
-    setTimeout(() => {
+    Promise.all([new Promise((r) => setTimeout(r, READY_AT)), clock.reach(16)]).then(() => {
       screenEl.classList.add('phase-ready');
       unlockInput();
-    }, READY_AT);
+    });
 
     // 카드는 한 번에 하나만 선택: 다른 카드를 누르면 이전 선택은 해제되고, 선택한 카드를 다시 누르면 해제된다
     const columns = document.querySelectorAll('.tag-column');
@@ -137,9 +172,11 @@
     });
 
     const EXIT_MS = 2100;   // 문장·버튼이 사라지고(0.5초) 긴 카드가 다 올라갈 때까지(마지막 카드 0.8초 + 1.1초 + 여유)
+    // 키워드를 고르는 것만으로는 Unity에 아무것도 보내지 않고, '해석 보기'에서 interpret(영상 16 → 17)을 보낸다
     document.getElementById('interpretBtn').addEventListener('click', (e) => {
-      if (!topic) return;
+      if (!topic || e.currentTarget.disabled) return;
       e.currentTarget.disabled = true;
+      sendUnityAction('interpret');
       try { sessionStorage.setItem('fortuneTopic', topic); } catch (err) {}
       lockInput();
       screenEl.classList.add('phase-exit');

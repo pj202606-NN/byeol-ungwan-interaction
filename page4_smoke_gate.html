@@ -76,6 +76,7 @@
   <script src="js/fit-screen.js"></script>
   <script src="js/nav.js"></script>
   <script src="js/ambient.js"></script>
+  <script src="js/timeline.js"></script>
   <div class="screen bg-fade" id="screen">
     <div class="field" id="field">
       <div class="milky-band"></div>
@@ -87,19 +88,21 @@
   </div>
 
   <script>
-    // 임시 구현: 스크린 영상이 나오면 각 단계의 at(ms) 값만 영상의 전환 시점에 맞추면 된다.
+    // 시각은 영상 02의 재생 시각(ms). 각 단계의 시점은 js/timeline.js의 TIMELINE.page4에서 조절한다.
+    const T = TIMELINE.page4;
+    const clock = UnitySync.clock(T.video, T.fallback);
     const PHASES = [
-      { at: 0,     name: 'scatter', screen: '말하듯 일렁이던 음파가 흩어짐' },
-      { at: 2500,  name: 'gather',  screen: '흐르는 연기(은하수 느낌)가 모여듦. 사람 형상·얼굴은 없음' },
-      { at: 5500,  name: 'rush',    screen: '연기 1인칭 시점으로 궤적을 따라 한국풍 대문을 향해 날아감 (박진감 있게, 지나치게 빠르지 않게)' },
-      { at: 10500, name: 'gate',    screen: '연기가 대문 안으로 흘러 들어감' },
+      { at: clock.sceneStart, name: 'scatter', screen: '#3 끝에서 어두워진 화면 (잠시 뜸)' },
+      { at: T.gatherAt, name: 'gather',  screen: '화면이 다시 밝아지며(페이드 인) 우주에 흐르는 연기(은하수 느낌)가 모여들기 시작. 사람 형상·얼굴은 없음' },
+      { at: T.rushAt,   name: 'rush',    screen: '모인 연기가 궤적을 그리며 별운관 대문을 향해 흘러감 (박진감 있게, 지나치게 빠르지 않게)' },
+      { at: T.gateAt,   name: 'gate',    screen: '연기가 대문 앞에 다다름 · 태블릿: 중앙에서 따뜻한 빛이 번짐' },
     ];
-    const END_AT = 12500;             // 다음 장면(#5)으로 넘어가는 시점
+    const END_AT = T.endAt;           // 다음 장면(#5)으로 넘어가기 시작 (페이드 0.9초 뒤, 연기가 대문 안으로 드는 1:04에 #5 시작)
 
     showScreenNotes([
       ...PHASES.map((p) => ({ at: p.at, text: p.screen })),
       { at: END_AT, text: '태블릿 #5로 전환' },
-    ], { total: END_AT + 900 });
+    ], { videoStart: clock.sceneStart, total: END_AT + 900 });
 
     lockInput();
     const field = document.getElementById('field');
@@ -108,15 +111,13 @@
 
     const screenEl = document.getElementById('screen');
     PHASES.forEach((phase) => {
-      setTimeout(() => {
+      clock.at(phase.at).then(() => {
         PHASES.forEach((p) => screenEl.classList.remove('phase-' + p.name));
         screenEl.classList.add('phase-' + phase.name);
-      }, phase.at);
+      });
     });
 
-    setTimeout(() => {
-      goTo('page5_oracle_room.html', 900);
-    }, END_AT);
+    clock.at(END_AT).then(() => goTo('page5_oracle_room.html', 900));
   </script>
 </body>
 </html>

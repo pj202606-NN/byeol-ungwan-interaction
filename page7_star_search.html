@@ -7,10 +7,18 @@
 <link rel="stylesheet" href="css/oracle.css">
 <style>
   /*
-    스크린: 아래에서 종이가 올라옴 → 점술가가 종이를 받아듦 → 종이를 내려둠 → 손 사이에 별빛이 모이며 별자리 탐색(루프) → 별자리를 찾음
-    태블릿: 책상 가운데에 작은 별빛이 모여 빙글빙글 돌며 모였다 퍼졌다 하는 로딩 루프 → 한 점으로 모여 빛남 → 다음 장면
-    입력은 받지 않는다. 생년월일시로 별자리를 찾는 실제 처리는 금방 끝나도, 연출은 최소 시간(SEARCH_MIN)만큼 보여준다.
+    스크린: 아래에서 종이가 올라옴 → 점술가가 종이를 손으로 잡음 → 점술가 대사 → 종이에서 별자리가 반짝이며 별자리 탐색 → 별자리를 찾음
+    태블릿: 밝은 책상 위로 대사 자막 → 책상 가운데에 작은 별빛이 모여 빙글빙글 돌며 모였다 퍼졌다 하는 로딩 루프 → 한 점으로 모여 빛남 → 다음 장면
+    입력은 받지 않는다. 생년월일시로 별자리를 찾는 실제 처리는 금방 끝나도, 연출은 FOUND_AT까지 보여준다.
   */
+  .guide-subtitle {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 120px;
+    margin: 0 auto;
+    z-index: 3;
+  }
   .room-shade { opacity: 0; transition: opacity 2s ease-in-out; }
   .phase-search .room-shade { opacity: 0.45; }
   .phase-found .room-shade { opacity: 0.3; }
@@ -51,22 +59,28 @@
   <script src="js/fit-screen.js"></script>
   <script src="js/nav.js"></script>
   <script src="js/ambient.js"></script>
-  <div class="screen bg-room" id="screen">
+  <script src="js/subtitles.js"></script>
+  <script src="js/timeline.js"></script>
+  <div class="screen bg-room bg-desk" id="screen">
     <div class="room-shade"></div>
     <div class="star-field" id="field">
       <div class="core-glow"></div>
     </div>
+    <div class="guide-subtitle" id="subtitle"></div>
     <div class="page-index">#7 page7_star_search</div>
   </div>
 
   <script>
-    // 타이밍 (단위: ms) - 스크린 영상이 나오면 이 값들만 영상에 맞추면 된다.
-    const PUT_DOWN_AT = 1500;   // 점술가가 받아든 종이를 내려둠
-    const GATHER_AT = 2700;     // 별빛이 모이기 시작 (종이를 내려둔 뒤)
+    // 시각은 영상 04의 재생 시각(ms, '건넨다.'를 누르면 영상 04 시작). 값과 자막은 js/timeline.js의 TIMELINE.page7에서 조절한다.
+    // Unity가 아직 영상 03(대기 루프)에 들어가기 전에 '건넨다.'를 눌렀다면, 영상 04가 실제로 시작될 때까지 기다렸다가 진행한다
+    const T = TIMELINE.page7;
+    const clock = UnitySync.clock(T.video, T.fallback);
+    const GATHER_AT = T.gatherAt; // 종이에서 별자리가 반짝이며 탐색 시작 · 태블릿: 별빛이 모이기 시작
     const GATHER_MS = 2500;     // 흩어진 별빛이 가운데로 모이는 시간
-    const SEARCH_MIN = 12700;   // 이 시점 전에는 별자리를 찾았더라도 탐색 루프를 계속 보여준다
+    const FOUND_AT = T.foundAt; // 이 시점 전에는 별자리를 찾았더라도 탐색 루프를 계속 보여준다
     const FOUND_MS = 1600;      // 별빛이 한 점으로 모여 빛나는 시간
-    const END_HOLD = 400;       // 빛난 뒤 다음 장면(#8)으로 넘어가기 전 여운. #8은 이 상태에서 끊김 없이 이어진다
+    const END_HOLD = 1500;      // 빛난 뒤 다음 장면(#8, 별빛이 퍼지기 시작)으로 넘어가기 전 여운. #8은 이 상태에서 끊김 없이 이어진다 (시연 후 400 → 1500)
+    const LINES = T.lines;
 
     // 관람객이 #6에서 입력한 생년월일시
     let birth = null;
@@ -145,13 +159,14 @@
       const lookup = findConstellation(birth).then((result) => {
         try { sessionStorage.setItem('constellationResult', JSON.stringify(result)); } catch (e) {}
       });
-      await wait(GATHER_AT);
+      playSubtitlesAt(document.getElementById('subtitle'), LINES, clock);
+      await clock.at(GATHER_AT);
       screenEl.classList.add('phase-search');
       setMode('gather');
       await wait(GATHER_MS);
       setMode('search');
-      // 조회가 끝나고, 최소 연출 시간도 지나야 '찾음'으로 넘어간다
-      await Promise.all([lookup, wait(SEARCH_MIN - GATHER_AT - GATHER_MS)]);
+      // 조회가 끝나고, 영상도 FOUND_AT에 이르러야 '찾음'으로 넘어간다
+      await Promise.all([lookup, clock.at(FOUND_AT)]);
       screenEl.classList.remove('phase-search');
       screenEl.classList.add('phase-found');
       setMode('found');
@@ -160,14 +175,16 @@
     }
 
     showScreenNotes([
-      { at: -900, text: '(#6에서 "건넨다." 직후) 태블릿 종이가 올라가는 0.9초에 맞춰, 스크린 아래에서 종이가 올라옴' },
-      { at: 0, text: '점술가가 올라온 종이를 손으로 받아듦' },
-      { at: PUT_DOWN_AT, text: '점술가가 받아든 종이를 내려둠' },
-      { at: GATHER_AT, text: '점술가의 손 사이로 별빛이 모여들기 시작 · 태블릿: 책상 가운데로 별빛이 모임' },
-      { at: GATHER_AT + GATHER_MS, text: '입력한 생년월일시로 별자리를 탐색하는 연출 (별빛이 손 사이에서 돌고, 모였다 퍼졌다 반복하는 루프)' },
-      { at: SEARCH_MIN, text: '관람객의 별자리를 찾아냄: 별빛이 한 점으로 모이며 빛남' },
-      { at: SEARCH_MIN + FOUND_MS + END_HOLD, text: '태블릿 #8로 끊김 없이 이어짐' },
-    ], { total: SEARCH_MIN + FOUND_MS + END_HOLD });
+      { at: 0, text: '(#6에서 "건넨다."를 누른 순간) 태블릿의 종이가 위로 올라감' },
+      { at: clock.sceneStart, text: '태블릿: 종이가 다 올라가고 밝은 책상만 남음' },
+      { at: T.paperAt, text: '스크린 아래에서 종이가 올라와 나타남' },
+      { at: T.grabAt, text: '점술가가 종이를 손으로 잡음' },
+      ...cueNotes(LINES, '점술가'),
+      { at: GATHER_AT, text: '별자리를 읽으려는 듯 종이 위에서 별자리가 반짝이며 별자리 탐색 시작 · 태블릿: 책상 가운데로 별빛이 모임' },
+      { at: GATHER_AT + GATHER_MS, text: '입력한 생년월일시로 별자리를 탐색하는 연출 · 태블릿: 별빛이 돌며 모였다 퍼졌다 반복하는 루프' },
+      { at: FOUND_AT, text: '관람객의 별자리를 찾아냄 · 태블릿: 별빛이 한 점으로 모이며 빛남' },
+      { at: FOUND_AT + FOUND_MS + END_HOLD, text: '태블릿 #8로 끊김 없이 이어짐' },
+    ], { videoStart: clock.sceneStart, total: FOUND_AT + FOUND_MS + END_HOLD });
 
     play();
   </script>

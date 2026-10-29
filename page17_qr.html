@@ -80,15 +80,15 @@
   <script src="js/fit-screen.js"></script>
   <script src="js/nav.js"></script>
   <script src="js/ambient.js"></script>
-  <div class="screen bg-room" id="screen">
-    <div class="subtitle qr-caption">운세 결과를 간직하려면 QR코드를 스캔하세요.</div>
+  <div class="screen bg-room bg-desk" id="screen">
+    <div class="subtitle text-light qr-caption">운세 결과를 간직하려면 QR코드를 스캔하세요.</div>
     <div class="flip-card">
       <div class="flip-inner">
         <div class="card-object flip-face flip-front"></div>
         <div class="card-object flip-face flip-back"><div class="qr-box">QR코드 이미지</div></div>
       </div>
     </div>
-    <button class="btn" id="leaveBtn">떠나기</button>
+    <button class="btn btn-light" id="leaveBtn">떠나기</button>
     <div class="page-index">#17 page17_qr</div>
   </div>
 
@@ -96,7 +96,7 @@
     // 타이밍 (단위: ms)
     const FLIP_AT = 500;      // #16에서 이어진 뒤 카드가 뒤집히기 시작
     const FLIP_MS = 1300;     // 뒤집히는 시간 (.flip-inner transition)
-    const READY_AT = FLIP_AT + FLIP_MS + 200;  // 안내 문장과 '떠나기' 버튼 등장
+    const READY_AT = FLIP_AT + FLIP_MS - 300;  // 안내 문장과 '떠나기' 버튼 등장 (카드가 다 뒤집히기 0.3초 전. 시연 후 0.5초 앞당김, 예전 +200)
     const UNLOCK_AT = READY_AT + 1000;
 
     lockInput();
@@ -107,6 +107,8 @@
 
     // 떠나기: 문장과 버튼이 스르륵 사라지고, 같은 책상·카드 그대로 #18로 끊김 없이 이어진다
     document.getElementById('leaveBtn').addEventListener('click', (e) => {
+      if (e.currentTarget.disabled) return;
+      sendUnityAction('leave');   // 영상 22 → 23
       e.currentTarget.disabled = true;
       lockInput();
       screenEl.classList.remove('phase-ready');

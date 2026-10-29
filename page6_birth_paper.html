@@ -7,24 +7,70 @@
 <link rel="stylesheet" href="css/oracle.css">
 <style>
   /*
-    스크린: (설명이 끝난 뒤 잠시 뜸) → 점술가가 말을 시작하며 손에 종이가 생김 → 대사 → 종이가 아래로 내려감
-    태블릿: 밝은 책상 → 살짝 어두워지며 나래이션 자막 → 다시 밝아지며 생년월일 종이가 위에서 내려옴
+    스크린: 점술가가 말을 시작하며 종이를 슬며시 듦 → 종이를 건네듯 손을 놓음 → 종이가 화면 아래로 내려가 사라짐
+    태블릿: (#5의 어두운 책상 그대로) 나래이션 자막 → 스크린의 종이가 사라지는 순간 생년월일 종이가 위에서 내려오며 책상이 밝아짐
             → '건넨다.'를 눌러야 다음 장면으로 (이 장면만 자동 진행 아님)
   */
   .guide-subtitle { z-index: 3; }
-  .room-shade { opacity: 0; }
+  /* #5 마지막의 어두운 책상(.phase-desk 0.62)에서 이어지고, 종이가 내려올 때 원래 밝기로 */
+  .room-shade { opacity: 0.62; }
+  .phase-bright .room-shade { opacity: 0; transition-duration: 2.2s; }
 
   /* 종이는 내려올 차례가 되기 전까지 숨겨 둔다 */
   #panel { visibility: hidden; }
   #panel.paper-drop,
   #panel.paper-rise { visibility: visible; }
 
+  /* ---------- 생년월일 종이 (images/birth-paper.png, 1536×1024 = 3:2, 가장자리는 투명) ----------
+     종이 이미지·안내 문구·입력칸·'건넨다.' 버튼이 모두 #panel 안에 있어 내려오고(paper-drop) 올라갈 때(paper-rise) 함께 움직인다.
+     예전 사다리꼴 종이(oracle.css .table-panel의 배경·그림자·clip-path)는 이 장면에서만 끄고 이미지로 대신한다.
+     크기와 위치는 아래 변수로 조절한다 (이미지 비율은 aspect-ratio로 고정) */
+  .table-panel {
+    --paper-w: 1300px;          /* 종이 이미지 너비 (예전 종이 폭과 같게) */
+    --paper-top: 30px;          /* 화면 위쪽에서 이미지 윗변까지 (이미지 위쪽에 약 26px 투명 여백이 있다) */
+    --paper-content-top: 290px; /* 이미지 윗변에서 안내 문구까지 */
+    --submit-bottom: 120px;     /* 이미지 아랫변에서 '건넨다.' 버튼 아랫변까지 */
+    --ink: #3b2c1e;             /* 종이 위 글씨색 (밝은 종이 위에서 읽히도록 진한 먹색) */
+    top: var(--paper-top);
+    width: var(--paper-w);
+    height: auto;
+    aspect-ratio: 3 / 2;
+    padding-top: var(--paper-content-top);
+    gap: 56px;
+    background: none;
+    box-shadow: none;
+    clip-path: none;
+    color: var(--ink);
+  }
+  /* 종이 이미지는 맨 아래 층. 터치는 그대로 통과시켜 입력칸·버튼을 가리지 않는다 */
+  .paper-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    pointer-events: none;
+    user-select: none;
+    filter: drop-shadow(0 10px 22px rgba(0,0,0,0.45));   /* 사각형이 아니라 종이 윤곽을 따라 생기는 그림자 */
+  }
+  .table-panel > :not(.paper-img):not(.submit-wrap) { position: relative; z-index: 1; }
+  .table-panel .subtitle { color: var(--ink); }
+  .table-panel .birth-trigger { color: var(--ink); border-bottom-color: var(--ink); }
+  .table-panel .birth-field::after { color: var(--ink); opacity: 0.7; }
+
+  /* 흰 글씨는 그대로 두고, 밝은 종이 위에서 회색 상자로 보이지 않도록 바탕만 진한 먹색으로 (이 장면만) */
+  #submitBtn.btn-light {
+    background: rgba(48,34,22,0.82);
+    border-color: rgba(48,34,22,0.9);
+  }
+  #submitBtn.btn-light:active { background: var(--color-fg); color: #000; }
+
   .submit-wrap {
     position: absolute;
+    z-index: 1;
     left: 50%;
-    bottom: 110px;
+    bottom: var(--submit-bottom);
     transform: translateX(-50%);
-    z-index: 2;
   }
 </style>
 </head>
@@ -33,9 +79,11 @@
   <script src="js/nav.js"></script>
   <script src="js/ambient.js"></script>
   <script src="js/subtitles.js"></script>
-  <div class="screen bg-room" id="screen">
+  <script src="js/timeline.js"></script>
+  <div class="screen bg-room bg-desk" id="screen">
     <div class="room-shade"></div>
     <div class="table-panel" id="panel">
+      <img class="paper-img" src="images/birth-paper.png" alt="" draggable="false">
       <div class="subtitle" style="margin:0; font-size:24px; font-family:'KoPub Batang Medium', 'Malgun Gothic', sans-serif;">
         당신이 이 세상에 태어난 때는 언제인가요?
       </div>
@@ -45,26 +93,23 @@
         <span class="birth-field"><button type="button" class="birth-trigger" id="day"></button><ul class="birth-list"></ul><span class="unit">일</span></span>
         <span class="birth-field"><button type="button" class="birth-trigger" id="hour"></button><ul class="birth-list"></ul><span class="unit">시</span></span>
       </div>
-    </div>
-    <div class="submit-wrap">
-      <button class="btn reveal-btn" id="submitBtn">건넨다.</button>
+      <div class="submit-wrap">
+        <button class="btn btn-light reveal-btn" id="submitBtn">건넨다.</button>
+      </div>
     </div>
     <div class="guide-subtitle" id="subtitle"></div>
     <div class="page-index">#6 page6_birth_paper</div>
   </div>
 
   <script>
-    // 타이밍 (단위: ms) - 스크린 영상이 나오면 이 값들만 영상에 맞추면 된다.
-    const START_PAUSE = 2500;   // #5의 설명이 끝나고 점술가가 다시 말을 시작하기 전의 뜸
-    const DIM_TO_TALK = 1200;   // 화면이 어두워지기 시작한 뒤 첫 자막까지 (종이가 손에 생기는 순간)
-    const END_DELAY = 800;      // 마지막 대사가 사라진 뒤 종이가 내려오기까지 (스크린의 종이가 아래로 내려가는 타이밍)
-    const DROP_DURATION = 1300; // 종이가 다 내려온 뒤 '건넨다.' 버튼이 뜨고 입력이 풀림 (paperDrop 애니메이션 길이)
-
-    // 점술가 대사 (임시 문구 - 실제 대본이 나오면 교체)
-    const LINES = [
-      { text: '그럼, 이제 당신에 대해 알아보도록 할까요.', hold: 4000, gap: 900 },
-      { text: '당신의 별을 찾으려면,<br>당신이 처음 이 세상에 온 때를 알아야 하지요.', hold: 5800, gap: 0 },
-    ];
+    // 시각은 영상 02의 재생 시각(ms). 값과 자막은 js/timeline.js의 TIMELINE.page6에서 조절한다.
+    // 마지막 자막은 종이가 내려오기 시작할 때 사라지기 시작해, 내려오는 종이와 겹치지 않게 한다
+    const T = TIMELINE.page6;
+    const clock = UnitySync.clock(T.video, T.fallback);
+    const DROP_AT = T.dropAt;   // 스크린의 종이가 화면 아래로 완전히 사라짐 → 태블릿에 종이가 내려오기 시작
+    const DROP_DURATION = 1600; // 종이가 다 내려온 뒤 '건넨다.' 버튼이 뜨고 입력이 풀림 (oracle.css paperDrop 애니메이션 길이)
+    const LINES = T.lines;
+    // '건넨다.'는 영상 02가 끝나 03(대기 루프)에 들어가기 전에 눌러도 된다: Unity가 03에 들어가는 순간 04를 튼다 (WebBridge.cs)
 
     function fillSelect(id, values) {
       const trigger = document.getElementById(id);
@@ -109,19 +154,14 @@
     fillSelect('hour', Array.from({ length: 24 }, (_, i) => i));
 
     lockInput();
-    const screenEl = document.getElementById('screen');
     const subtitle = document.getElementById('subtitle');
     const panel = document.getElementById('panel');
 
     async function play() {
-      await subtitleWait(START_PAUSE);
-      screenEl.classList.add('phase-desk');
-      await subtitleWait(DIM_TO_TALK);
-      await playSubtitles(subtitle, LINES);
-      await subtitleWait(END_DELAY);
-      screenEl.classList.remove('phase-desk');
-      screenEl.classList.add('phase-bright');
+      playSubtitlesAt(subtitle, LINES, clock);
+      await clock.at(DROP_AT);
       panel.classList.add('paper-drop');
+      document.getElementById('screen').classList.add('phase-bright');
       await subtitleWait(DROP_DURATION);
       document.getElementById('submitBtn').classList.add('revealed');
       unlockInput();
@@ -131,6 +171,8 @@
     // 다음 장면(#7)도 같은 책상 화면이므로 끊김 없이 이어 붙인다.
     function submitBirth() {
       const btn = document.getElementById('submitBtn');
+      if (btn.disabled) return;
+      sendUnityAction('birth');
       btn.disabled = true;
       btn.classList.remove('revealed');
       lockInput();
@@ -139,20 +181,20 @@
       try { sessionStorage.setItem('birth', JSON.stringify(birth)); } catch (e) {}
       panel.classList.remove('paper-drop');
       panel.classList.add('paper-rise');
-      setTimeout(() => goToInPlace('page7_star_search.html'), 900);
+      setTimeout(() => goToInPlace('page7_star_search.html'), 1400); // paperRise 애니메이션 길이와 맞춘다
     }
 
     document.getElementById('submitBtn').addEventListener('click', submitBirth);
 
-    const schedule = subtitleSchedule(LINES, START_PAUSE + DIM_TO_TALK);
-    const dropAt = schedule.end + END_DELAY;
     showScreenNotes([
-      { at: 0, text: '점술가의 설명이 끝난 뒤 잠시 뜸' },
-      { at: START_PAUSE, text: '점술가가 다시 말하기 시작하며, 손에 못 보던 종이가 생겨남 · 태블릿: 책상이 살짝 어두워짐' },
-      ...lineNotes(LINES, schedule, '점술가'),
-      { at: dropAt, text: '점술가가 쥔 종이가 아래로 내려감 · 태블릿: 생년월일 종이가 책상으로 내려옴' },
-      { at: dropAt + DROP_DURATION, text: '관람객이 생년월일시를 고르고 "건넨다."를 누를 때까지 대기 (점술가 대기 루프)' },
-    ], { total: dropAt + DROP_DURATION, waitInput: true });
+      { at: clock.sceneStart, text: '점술가가 잠시 숨을 고름 · 태블릿: 어두운 책상 그대로' },
+      ...cueNotes(LINES, '점술가'),
+      { at: T.liftAt, text: '점술가가 말하며 손에 든 종이를 슬며시 들어 올림' },
+      { at: T.releaseAt, text: '점술가가 종이를 아래로 건네듯 손을 놓음' },
+      { at: T.descendAt, text: '종이가 화면 아래쪽으로 천천히 내려감' },
+      { at: DROP_AT, text: '종이가 스크린 아래로 완전히 사라짐 · 태블릿: 자막이 사라지며 생년월일 종이가 위에서 내려오고 책상이 밝아짐' },
+      { at: DROP_AT + DROP_DURATION, text: '관람객이 생년월일시를 고르고 "건넨다."를 누를 때까지 대기 (영상 02 끝 → 03 대기 루프)' },
+    ], { videoStart: clock.sceneStart, total: DROP_AT + DROP_DURATION, waitInput: true });
 
     play();
   </script>
