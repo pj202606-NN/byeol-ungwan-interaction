@@ -9,9 +9,8 @@
   /*
     스크린: 점술가가 말을 시작하며 종이를 슬며시 듦 → 종이를 건네듯 손을 놓음 → 종이가 화면 아래로 내려가 사라짐
     태블릿: (#5의 어두운 책상 그대로) 나래이션 자막 → 스크린의 종이가 사라지는 순간 생년월일 종이가 위에서 내려오며 책상이 밝아짐
-            → '건넨다.'를 눌러야 다음 장면으로 (이 장면만 자동 진행 아님)
+            → '건넨다'를 눌러야 다음 장면으로 (이 장면만 자동 진행 아님)
   */
-  .guide-subtitle { z-index: 3; }
   /* #5 마지막의 어두운 책상(.phase-desk 0.62)에서 이어지고, 종이가 내려올 때 원래 밝기로 */
   .room-shade { opacity: 0.62; }
   .phase-bright .room-shade { opacity: 0; transition-duration: 2.2s; }
@@ -22,14 +21,14 @@
   #panel.paper-rise { visibility: visible; }
 
   /* ---------- 생년월일 종이 (images/birth-paper.png, 1536×1024 = 3:2, 가장자리는 투명) ----------
-     종이 이미지·안내 문구·입력칸·'건넨다.' 버튼이 모두 #panel 안에 있어 내려오고(paper-drop) 올라갈 때(paper-rise) 함께 움직인다.
+     종이 이미지·안내 문구·입력칸·'건넨다' 버튼이 모두 #panel 안에 있어 내려오고(paper-drop) 올라갈 때(paper-rise) 함께 움직인다.
      예전 사다리꼴 종이(oracle.css .table-panel의 배경·그림자·clip-path)는 이 장면에서만 끄고 이미지로 대신한다.
      크기와 위치는 아래 변수로 조절한다 (이미지 비율은 aspect-ratio로 고정) */
   .table-panel {
     --paper-w: 1300px;          /* 종이 이미지 너비 (예전 종이 폭과 같게) */
     --paper-top: 30px;          /* 화면 위쪽에서 이미지 윗변까지 (이미지 위쪽에 약 26px 투명 여백이 있다) */
     --paper-content-top: 290px; /* 이미지 윗변에서 안내 문구까지 */
-    --submit-bottom: 120px;     /* 이미지 아랫변에서 '건넨다.' 버튼 아랫변까지 */
+    --submit-bottom: 145px;     /* 이미지 아랫변에서 '건넨다' 버튼 아랫변까지 (2026-11-19 120 → 145, 살짝 위로) */
     --ink: #3b2c1e;             /* 종이 위 글씨색 (밝은 종이 위에서 읽히도록 진한 먹색) */
     top: var(--paper-top);
     width: var(--paper-w);
@@ -56,15 +55,40 @@
   .table-panel > :not(.paper-img):not(.submit-wrap) { position: relative; z-index: 1; }
   .table-panel .subtitle { color: var(--ink); }
   .table-panel .birth-trigger { color: var(--ink); border-bottom-color: var(--ink); }
-  .table-panel .birth-field::after { color: var(--ink); opacity: 0.7; }
+  /* 드롭다운 화살표(▾)는 없앤다: 칸 오른쪽 끝(단위 글자 '년·월·일·시' 자리)에 붙어 글자와 겹쳐 보였다.
+     칸을 눌러 목록을 여는 동작은 그대로. 화살표 자리로 비워 두던 오른쪽 여백도 없애 숫자를 칸 가운데에 둔다 */
+  .table-panel .birth-field::after { content: none; display: none; }
+  .table-panel .birth-trigger { padding: 0 4px 6px; -webkit-appearance: none; appearance: none; }
+  /* 펼친 목록이 '건넨다' 버튼 위에 보이도록: 입력칸 묶음을 버튼 묶음(.submit-wrap, z-index 1)보다 한 층 위에 둔다.
+     (목록의 z-index 10은 입력칸 묶음 안에서만 통한다. 같은 z-index 1이면 DOM에서 뒤에 오는 버튼이 목록을 덮는다)
+     위의 '.table-panel > :not(.paper-img):not(.submit-wrap)'(z-index 1)보다 우선하도록 id로 지정한다 */
+  #panel > .birth-fields { z-index: 2; }
+  /* 종이 위 글씨(질문·숫자·단위·펼친 목록·안내)는 본명조. 날짜 선택 줄만 조금 아래로 (2026-11-19) */
+  #panel .birth-fields,
+  #panel .birth-error { font-family: 'BonMyeongjo', 'Malgun Gothic', serif; }
+  #panel > .birth-fields { margin-top: 24px; }
 
-  /* 흰 글씨는 그대로 두고, 밝은 종이 위에서 회색 상자로 보이지 않도록 바탕만 진한 먹색으로 (이 장면만) */
+  /* '건넨다' 버튼: 흰 글씨는 그대로, 예전 바탕색(진한 먹색 rgba(48,34,22,0.82))을 테두리로 쓰고
+     안쪽은 그보다 어둡고 옅은 반투명 바탕 + 뒤를 흐리게 비치는 유리 효과(글래스모피즘) (2026-11-19) */
   #submitBtn.btn-light {
-    background: rgba(48,34,22,0.82);
-    border-color: rgba(48,34,22,0.9);
+    background: rgba(20,13,7,0.6);   /* 예전(0.82)보다 옅지만 더 짙은 색: 밝은 종이 위에서도 흰 글씨가 읽히게 */
+    border-color: rgba(48,34,22,0.82);
+    -webkit-backdrop-filter: blur(10px) saturate(115%);
+    backdrop-filter: blur(10px) saturate(115%);
   }
   #submitBtn.btn-light:active { background: var(--color-fg); color: #000; }
 
+  /* 잘못된 날짜 안내: 자리를 미리 잡아 두어 문구가 나타나도 버튼·입력칸이 움직이지 않는다 */
+  .birth-error {
+    min-height: calc(30px * var(--ui));
+    margin-top: -24px;
+    font-size: calc(20px * var(--ui));
+    color: #8a2a1a;
+    text-align: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  .birth-error.show { opacity: 1; }
   .submit-wrap {
     position: absolute;
     z-index: 1;
@@ -80,11 +104,14 @@
   <script src="js/ambient.js"></script>
   <script src="js/subtitles.js"></script>
   <script src="js/timeline.js"></script>
+  <script src="js/desk-video.js"></script>
+  <script src="js/vendor/korean-lunar-calendar.min.js"></script>
+  <script src="js/byeol-data.js"></script>
   <div class="screen bg-room bg-desk" id="screen">
     <div class="room-shade"></div>
     <div class="table-panel" id="panel">
       <img class="paper-img" src="images/birth-paper.png" alt="" draggable="false">
-      <div class="subtitle" style="margin:0; font-size:24px; font-family:'KoPub Batang Medium', 'Malgun Gothic', sans-serif;">
+      <div class="subtitle" style="margin:0; font-size:calc(24px * var(--ui)); font-family:'BonMyeongjo', 'Malgun Gothic', sans-serif;">
         당신이 이 세상에 태어난 때는 언제인가요?
       </div>
       <div class="birth-fields">
@@ -93,40 +120,46 @@
         <span class="birth-field"><button type="button" class="birth-trigger" id="day"></button><ul class="birth-list"></ul><span class="unit">일</span></span>
         <span class="birth-field"><button type="button" class="birth-trigger" id="hour"></button><ul class="birth-list"></ul><span class="unit">시</span></span>
       </div>
+      <div class="birth-error" id="birthError" role="alert"></div>
       <div class="submit-wrap">
-        <button class="btn btn-light reveal-btn" id="submitBtn">건넨다.</button>
+        <button class="btn btn-light reveal-btn" id="submitBtn">건넨다</button>
       </div>
     </div>
-    <div class="guide-subtitle" id="subtitle"></div>
     <div class="page-index">#6 page6_birth_paper</div>
   </div>
 
   <script>
     // 시각은 영상 02의 재생 시각(ms). 값과 자막은 js/timeline.js의 TIMELINE.page6에서 조절한다.
     // 마지막 자막은 종이가 내려오기 시작할 때 사라지기 시작해, 내려오는 종이와 겹치지 않게 한다
+    DeskVideo.attach();   // 책상 배경 영상 (js/desk-video.js). 종이가 내려오는 동안만 책상 이미지로 (아래 play())
     const T = TIMELINE.page6;
     const clock = UnitySync.clock(T.video, T.fallback);
     const DROP_AT = T.dropAt;   // 스크린의 종이가 화면 아래로 완전히 사라짐 → 태블릿에 종이가 내려오기 시작
-    const DROP_DURATION = 1600; // 종이가 다 내려온 뒤 '건넨다.' 버튼이 뜨고 입력이 풀림 (oracle.css paperDrop 애니메이션 길이)
+    const DROP_DURATION = 1600; // 종이가 다 내려온 뒤 '건넨다' 버튼이 뜨고 입력이 풀림 (oracle.css paperDrop 애니메이션 길이)
     const LINES = T.lines;
-    // '건넨다.'는 영상 02가 끝나 03(대기 루프)에 들어가기 전에 눌러도 된다: Unity가 03에 들어가는 순간 04를 튼다 (WebBridge.cs)
+    const DESK_VIDEO_FADE = 400;     // 종이가 내려오기 직전 책상 영상이 사라지는 시간
+    const DESK_VIDEO_RETURN = 1000;  // 종이가 다 내려온 뒤 책상 영상이 다시 나타나는 시간
+    // '건넨다'는 영상 02가 끝나 03(대기 루프)에 들어가기 전에 눌러도 된다: Unity가 03에 들어가는 순간 04를 튼다 (WebBridge.cs)
 
-    function fillSelect(id, values) {
+    // labelOf: 화면에 보일 글자 (생략하면 값 그대로). 값(data-value)과 화면 글자를 따로 둘 때만 쓴다
+    function fillSelect(id, values, labelOf) {
+      const label = (v) => (labelOf ? labelOf(v) : v);
       const trigger = document.getElementById(id);
       const field = trigger.parentElement;
       const list = field.querySelector('.birth-list');
       function choose(v) {
         trigger.dataset.value = v;
-        trigger.textContent = v;
+        trigger.textContent = label(v);
         list.querySelectorAll('li').forEach((li) => li.classList.toggle('selected', li.dataset.value == v));
       }
       values.forEach((v) => {
         const li = document.createElement('li');
         li.dataset.value = v;
-        li.textContent = v;
+        li.textContent = label(v);
         li.addEventListener('click', () => {
           choose(v);
           field.classList.remove('open');
+          showError('');
         });
         list.appendChild(li);
       });
@@ -147,44 +180,119 @@
     });
 
     const years = [];
-    for (let y = 2026; y >= 1950; y--) years.push(y);
+    for (let y = ByeolData.YEAR_MAX; y >= ByeolData.YEAR_MIN; y--) years.push(y);   // 1950~2026 (음양력 변환 지원 범위 1000~2050 안)
     fillSelect('year', years);
     fillSelect('month', Array.from({ length: 12 }, (_, i) => i + 1));
-    fillSelect('day', Array.from({ length: 31 }, (_, i) => i + 1));
-    fillSelect('hour', Array.from({ length: 24 }, (_, i) => i));
+    fillSelect('day', Array.from({ length: 31 }, (_, i) => i + 1));   // 그 달에 없는 날은 '건넨다'에서 안내한다
+    const HOUR_UNKNOWN = '모름';   // 태어난 시각을 모르면 0시가 아니라 null로 저장한다 (별자리 판정에는 시각을 쓰지 않는다)
+    const HOUR_UNKNOWN_LABEL = '-';  // 화면에는 '모름' 대신 하이픈만 (값과 의미는 그대로 '모름' → hour: null, 기본 선택)
+    fillSelect('hour', [HOUR_UNKNOWN].concat(Array.from({ length: 24 }, (_, i) => i)), (v) => (v === HOUR_UNKNOWN ? HOUR_UNKNOWN_LABEL : v));
+
+    // 이번 전시의 #6은 양력 생년월일만 받는다 (양력·음력·윤달 버튼은 없앰, 2026-11-16).
+    // 음력 변환은 js/byeol-data.js(resolveBirth)와 js/vendor/korean-lunar-calendar.min.js에 그대로 있어,
+    // 다시 쓰려면 readInput()의 calendar를 'lunar'로, leap을 윤달 여부로 넘기면 된다.
+    const calendar = 'solar';
+
+    const errorEl = document.getElementById('birthError');
+    function showError(msg) {
+      if (msg) errorEl.textContent = msg;
+      errorEl.classList.toggle('show', !!msg);
+    }
+
+    // 별자리 데이터는 종이가 내려오는 동안 미리 불러 둔다 ('건넨다' 때 아직이면 끝날 때까지 기다린다)
+    let db = null;
+    let dbLoading = null;
+    function loadData() {
+      if (!dbLoading) {
+        dbLoading = ByeolData.load().then((d) => (db = d));
+        dbLoading.catch(() => { dbLoading = null; });
+      }
+      return dbLoading;
+    }
+    loadData().catch(() => {});
 
     lockInput();
-    const subtitle = document.getElementById('subtitle');
     const panel = document.getElementById('panel');
 
     async function play() {
-      playSubtitlesAt(subtitle, LINES, clock);
+      // 시연 후 내레이션 자막은 화면에 띄우지 않는다 (playSubtitlesAt에 null → 대사 시각만 흘려보내 그 시각에 맞춘 연출·버튼은 그대로)
+      playSubtitlesAt(null, LINES, clock);
+      // 종이가 내려오는 동안(DROP_AT ~ DROP_AT + DROP_DURATION)은 책상 영상을 걷어 내고 책상 이미지를 보인다.
+      // 종이가 내려오기 직전 DESK_VIDEO_FADE에 걸쳐 영상이 사라지고, 종이가 다 내려온 순간부터 다시 나타난다
+      clock.at(DROP_AT - DESK_VIDEO_FADE).then(() => DeskVideo.hide(DESK_VIDEO_FADE));
       await clock.at(DROP_AT);
       panel.classList.add('paper-drop');
       document.getElementById('screen').classList.add('phase-bright');
       await subtitleWait(DROP_DURATION);
+      DeskVideo.show(DESK_VIDEO_RETURN);
       document.getElementById('submitBtn').classList.add('revealed');
       unlockInput();
     }
 
-    // 건넨다: 버튼은 스르륵 사라지고 종이는 위로(스크린 속 점술가에게) 올라간다.
-    // 다음 장면(#7)도 같은 책상 화면이므로 끊김 없이 이어 붙인다.
-    function submitBirth() {
+    function readInput() {
+      const num = (k) => {
+        const v = document.getElementById(k).dataset.value;
+        return v === undefined || v === '' ? undefined : Number(v);
+      };
+      const hourValue = document.getElementById('hour').dataset.value;
+      return {
+        calendar,
+        year: num('year'),
+        month: num('month'),
+        day: num('day'),
+        leap: false,
+        hour: hourValue === HOUR_UNKNOWN ? null : Number(hourValue),
+      };
+    }
+
+    // 건넨다: 입력 검증 → (음력이면) 양력 변환 → 별자리 판정 → 이 관람객의 별자리·별 이야기를 세션에 저장
+    //   → 그다음에만 Unity birth 명령과 종이가 올라가는 연출. 하나라도 실패하면 종이에 안내를 띄우고 이 장면에 머문다.
+    // 별자리 판정은 여기서 한 번만 한다. 다음 장면(#7)도 같은 책상 화면이므로 끊김 없이 이어 붙인다.
+    let submitting = false;
+    async function submitBirth() {
       const btn = document.getElementById('submitBtn');
-      if (btn.disabled) return;
-      sendUnityAction('birth');
+      if (btn.disabled || submitting) return;
+      submitting = true;
+      showError('');
+      const input = readInput();
+      try {
+        if (!db) await loadData();
+      } catch (e) {
+        showError(ByeolData.MESSAGES.dataFailed);
+        submitting = false;
+        return;
+      }
+      const result = ByeolData.buildVisit(db, input, new Date());
+      if (!result.ok) {
+        console.warn('[#6] 생년월일 확인 실패:', result.code, result.error || result.message, input);
+        showError(result.message);
+        submitting = false;
+        return;
+      }
+      if (!ByeolData.saveVisit(result.visit)) {
+        showError(ByeolData.MESSAGES.saveFailed);
+        submitting = false;
+        return;
+      }
+      const v = result.visit;
+      console.info('[#6] 별자리 판정:', v.mansionId, v.profile.name, '· 양력', v.birth.solar, '· 이야기 날짜', v.storyDate.date, '(' + v.storyDate.status + (v.storyDate.simulated ? ', 개발용 오늘 ' + v.storyDate.simulated : '') + ')');
+      // 판정한 별자리 ID를 birth와 함께 보낸다 → Unity가 04 공통 영상 뒤에 04_constellation_[ID]를 재생 (서버·Unity는 다시 판정하지 않음)
+      sendUnityAction('birth', { mansionId: v.mansionId });
       btn.disabled = true;
       btn.classList.remove('revealed');
       lockInput();
-      const birth = {};
-      ['year', 'month', 'day', 'hour'].forEach((k) => { birth[k] = Number(document.getElementById(k).dataset.value); });
-      try { sessionStorage.setItem('birth', JSON.stringify(birth)); } catch (e) {}
+      // 기존 키 'birth'도 남겨 둔다 (#13이 읽음): 입력 원본 + 변환된 양력
+      try { sessionStorage.setItem('birth', JSON.stringify(v.birth)); } catch (e) {}
       panel.classList.remove('paper-drop');
       panel.classList.add('paper-rise');
       setTimeout(() => goToInPlace('page7_star_search.html'), 1400); // paperRise 애니메이션 길이와 맞춘다
     }
 
-    document.getElementById('submitBtn').addEventListener('click', submitBirth);
+    document.getElementById('submitBtn').addEventListener('click', (e) => {
+      // 목록이 펼쳐진 채로 버튼 자리를 누르면 목록만 닫는다 (항목을 고르려다 버튼이 눌려 넘어가지 않도록)
+      if (document.querySelector('.birth-field.open')) return;
+      submitBirth();
+    });
 
     showScreenNotes([
       { at: clock.sceneStart, text: '점술가가 잠시 숨을 고름 · 태블릿: 어두운 책상 그대로' },
@@ -193,7 +301,7 @@
       { at: T.releaseAt, text: '점술가가 종이를 아래로 건네듯 손을 놓음' },
       { at: T.descendAt, text: '종이가 화면 아래쪽으로 천천히 내려감' },
       { at: DROP_AT, text: '종이가 스크린 아래로 완전히 사라짐 · 태블릿: 자막이 사라지며 생년월일 종이가 위에서 내려오고 책상이 밝아짐' },
-      { at: DROP_AT + DROP_DURATION, text: '관람객이 생년월일시를 고르고 "건넨다."를 누를 때까지 대기 (영상 02 끝 → 03 대기 루프)' },
+      { at: DROP_AT + DROP_DURATION, text: '관람객이 생년월일시를 고르고 "건넨다"를 누를 때까지 대기 (영상 02 끝 → 03 대기 루프)' },
     ], { videoStart: clock.sceneStart, total: DROP_AT + DROP_DURATION, waitInput: true });
 
     play();

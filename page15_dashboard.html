@@ -11,7 +11,7 @@
             (카메라 초점: 별자리 → 점술가, 창밖 밤하늘에는 관람객의 별자리가 반짝임) → 퍼진 요소가 점술가 쪽 중앙으로 모임
             → 연기가 일렁이고 별빛이 반짝이는 루프 ('다음'을 누를 때까지)
     태블릿: (#14의 어두운 책상에서 끊김 없이 이어짐) 어두운 책상, 입력 잠금 + 점술가의 나래이션 자막 (씬 약 7초부터)
-            → 씬 약 23초에 어두운 책상 위로 운세 총정리 화면이 스르륵 나타남
+            → 씬 약 20.5초에 어두운 책상 위로 운세 총정리 화면이 스르륵 나타남
             → Unity가 영상 20(대기 루프)에 들어가면 '다음' 버튼이 뜨고, 누르면 summary_next(영상 20 → 21)와 함께 #16
   */
   /* #14와 같은 어두운 책상(.room-shade 0.55)으로 시작해 총정리 화면이 떠 있는 동안에도 어두운 채 #16으로 이어진다 */
@@ -29,7 +29,7 @@
   #nextBtn {
     position: absolute;
     left: 50%;
-    bottom: 70px;
+    bottom: 110px;
     transform: translate(-50%, 16px);
     z-index: 2;
     pointer-events: none;
@@ -39,55 +39,61 @@
 
   /* 어두운 책상 위의 흰 글씨 */
   .dashboard-layout .card-object,
-  .dashboard-layout .label,
-  .name-box,
   .mood-tag,
   .dashboard-card { color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,0.75); }
   .mood-tag,
   .dashboard-card { border-color: rgba(255,255,255,0.45); }
 
-  .guide-subtitle {
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 50%;
-    margin: 0 auto;
-    transform: translateY(-50%);
-    z-index: 3;
-  }
-
+  /* (2026-11-19) 왼쪽: #8과 같은 크기의 카드(자리 340×480 → 그림 약 248×532)와, 그 그림 폭에 맞춘 '오늘의 기운' */
   .dash-left {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    align-items: center;
+    gap: calc(20px + 26px);   /* 그림이 카드 자리보다 위아래로 약 26px씩 나오므로 그만큼 띄운다 */
+  }
+  .dash-left .mood-tag {
+    width: calc(480px * 1.108 * 0.92 * 1748 / (0.96 * 3591));   /* = 카드 그림 폭 (css/oracle.css .card-art와 같은 계산) */
+    margin-top: 0;
+    transform: translateY(24px);   /* 카드와 다른 상자 위치는 유지하고 오늘의 기운만 아래로 */
+    box-sizing: border-box;
+    text-align: center;
+    background: rgba(0,0,0,0.45);   /* 옆의 세 이야기 상자(.dashboard-card)와 같은 바탕 */
   }
   .dash-right {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 4px;
+    text-align: left;
   }
-  .name-box {
-    width: 460px;
-    min-height: 52px;
-    border: 1px solid var(--color-border);
-    background: rgba(0,0,0,0.4);
-    display: flex;
-    align-items: center;
-    padding: 0 18px;
-    font-size: 20px;
-    margin-bottom: 14px;
+  /* 항목 이름('별자리 이름' '소속 사신수' …)은 값보다 어둡게 */
+  .dash-key { color: rgba(255,255,255,0.5); text-shadow: 0 1px 4px rgba(0,0,0,0.75); }
+  .label { font-size: calc(16px * var(--ui)); }
+  /* 별자리 이름: #9와 같은 크기의 본명조, 상자 없이. 옆의 한자 표기도 #9처럼 '정수 · 井' */
+  .dash-name { margin: calc(6px * var(--ui)) 0 calc(22px * var(--ui)); color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,0.75), 0 0 14px rgba(0,0,0,0.5); }
+  #dashName { font-family: 'BonMyeongjo', "Pretendard", "Malgun Gothic", sans-serif; font-size: calc(32px * var(--ui)); }
+  .dash-hanja { margin-left: 14px; font-size: calc(22px * var(--ui)); opacity: 0.8; }
+  /* 사신수·동물·키워드: #9처럼 항목 이름 칸을 같은 폭으로 두고 값은 그 오른쪽에서 왼쪽 정렬 */
+  .dash-row { display: flex; gap: 20px; text-align: left; font-size: calc(18px * var(--ui)); line-height: 1.5; margin-bottom: calc(10px * var(--ui)); }
+  .dash-row .dash-key { flex: 0 0 calc(104px * var(--ui)); }
+  .dash-row .dash-val { flex: 1; color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,0.75); word-break: keep-all; }
+  .dashboard-cards { margin-top: calc(34px * var(--ui)); }   /* 세 상자를 조금 아래로 (예전 14px) */
+  .dashboard-card {
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 0;
+    padding: calc(56px * var(--ui)) calc(22px * var(--ui)) calc(8px * var(--ui));   /* 상자 크기·위치는 고정, 내부 글만 16px 아래로 */
   }
-  .label {
-    font-size: 16px;
-    color: var(--color-muted);
-    margin-top: 8px;
-  }
+  .dashboard-card > * { position: relative; top: 16px; }   /* 박스는 고정하고 제목·구분선·본문만 함께 조금 더 아래로 */
+  .dash-card-title { font-size: calc(17px * var(--ui)); color: #fff; }
+  /* 제목 아래 짧은 금색 구분선, 그 아래 종합 이야기(본명조) */
+  .dash-card-rule { width: calc(40px * var(--ui)); height: 1px; margin: calc(22px * var(--ui)) auto; background: var(--card-gold); }
+  .dash-card-text { font-family: 'BonMyeongjo', 'Malgun Gothic', serif; font-size: calc(15px * var(--ui)); line-height: 1.7; color: #fff; text-align: justify; text-align-last: left; letter-spacing: normal; word-break: normal; line-break: strict; }   /* 양쪽 정렬, 자간은 그대로. 낱말 단위로만 줄을 바꾸면(keep-all) 빈칸이 크게 벌어져 한국어 기본 줄바꿈으로 */
 </style>
 </head>
 <body>
   <script src="js/fit-screen.js"></script>
   <script src="js/nav.js"></script>
+  <script src="js/byeol-data.js"></script>
   <script src="js/ambient.js"></script>
   <script src="js/timeline.js"></script>
   <script src="js/subtitles.js"></script>
@@ -95,30 +101,53 @@
     <div class="room-shade"></div>
     <div class="dashboard-layout" style="margin-bottom:40px;">
       <div class="dash-left">
-        <div class="card-object" style="width:260px; height:340px;">별자리 이미지</div>
-        <div class="mood-tag">오늘의 기운: 천운</div>
+        <div class="card-object" id="dashCard" style="width:340px; height:480px;"></div>
+        <div class="mood-tag">오늘의 기운: <span id="dashFlow"></span></div>
       </div>
       <div class="dash-right">
-        <div class="label" style="margin-top:0;">별자리 이름</div>
-        <div class="name-box"></div>
-        <div class="label">소속 사신수</div>
-        <div class="label">상징 동물</div>
-        <div class="label" style="margin-bottom:16px;">성격 키워드</div>
+        <div class="label dash-key">별자리 이름</div>
+        <div class="dash-name"><span id="dashName"></span><span class="dash-hanja" id="dashHanja"></span></div>
+        <div class="dash-row"><span class="dash-key">소속 사신수</span><span class="dash-val" id="dashSashin"></span></div>
+        <div class="dash-row"><span class="dash-key">상징 동물</span><span class="dash-val" id="dashAnimal"></span></div>
+        <div class="dash-row"><span class="dash-key">성격 키워드</span><span class="dash-val" id="dashKeywords"></span></div>
         <div class="dashboard-cards">
-          <div class="dashboard-card">오늘의 운세 요약</div>
-          <div class="dashboard-card">이달의 운세 요약</div>
-          <div class="dashboard-card">올해의 운세 요약</div>
+          <div class="dashboard-card" data-period="today"><div class="dash-card-title">오늘의 별 이야기</div><div class="dash-card-rule"></div><div class="dash-card-text"></div></div>
+          <div class="dashboard-card" data-period="month"><div class="dash-card-title">이달의 별 이야기</div><div class="dash-card-rule"></div><div class="dash-card-text"></div></div>
+          <div class="dashboard-card" data-period="year"><div class="dash-card-title">올해의 별 이야기</div><div class="dash-card-rule"></div><div class="dash-card-text"></div></div>
         </div>
       </div>
     </div>
     <button class="btn btn-light" id="nextBtn">다음</button>
-    <div class="guide-subtitle" id="subtitle"></div>
     <div class="page-index">#15 page15_dashboard</div>
   </div>
 
   <script>
     // 시각은 영상 19(총정리 도입)의 재생 시각(ms). 값과 자막은 js/timeline.js의 TIMELINE.page15에서 조절한다.
-    // 총정리 화면은 SHOW_AT(씬 약 23초)에, '다음'은 그 뒤 Unity가 영상 20(대기 루프)에 들어가야 뜬다
+    // 총정리 화면은 SHOW_AT(씬 약 20.5초)에, '다음'은 그 뒤 Unity가 영상 20(대기 루프)에 들어가야 뜬다
+    // 총정리: 관람객이 어느 시기·주제를 골랐든, 같은 별자리 ID로 오늘·이달·올해 세 기간의 '종합' 간략을 모두 보여 준다.
+    // 오늘의 기운 = 오늘 · 종합의 '운세 흐름' 값 그대로 (길·보통·주의). 다른 등급을 만들지 않는다.
+    (function fillDashboard() {
+      const visit = ByeolData.requireVisit();
+      if (!visit) return;
+      const p = visit.profile;
+      ByeolData.fillCard(document.getElementById('dashCard'), p);
+      document.getElementById('dashName').textContent = p.name;
+      const mm = /^(.+)\((.+)\)$/.exec(p.mansion);   // '정(井)' → '정수 · 井' (#9와 같은 표기, 데이터는 그대로)
+      document.getElementById('dashHanja').textContent = mm ? mm[1] + '수 · ' + mm[2] : p.mansion;
+      document.getElementById('dashSashin').textContent = p.sashin;
+      document.getElementById('dashAnimal').textContent = p.animal;
+      document.getElementById('dashKeywords').textContent = p.keywords.join(' · ');
+      document.querySelectorAll('.dashboard-card[data-period]').forEach((cardEl) => {
+        const story = ByeolData.getStory(visit, cardEl.dataset.period, '종합');
+        const textEl = cardEl.querySelector('.dash-card-text');
+        if (!story) { console.error('[#15] 종합 이야기 없음:', cardEl.dataset.period); textEl.textContent = ''; return; }
+        textEl.textContent = story.notOpen ? story.message : story.brief;
+      });
+      const today = ByeolData.getStory(visit, 'today', '종합');
+      // 오늘의 기운 = 이 관람객의 날짜(#6에서 정함)·오늘·종합의 fortune 그대로. 데이터가 없으면 임의의 값을 넣지 않고 비워 둔다
+      document.getElementById('dashFlow').textContent = today && today.flow ? today.flow : '—';
+    })();
+
     const T = TIMELINE.page15;
     const clock = UnitySync.clock(T.video, T.fallback);
     const SPREAD_AT = 0;         // 스크린: 점술가가 손을 내리고 별빛·운세 요소가 가장자리로 퍼짐, 카메라 초점이 점술가로
@@ -132,7 +161,8 @@
     lockInput();
     const screenEl = document.getElementById('screen');
     const nextBtn = document.getElementById('nextBtn');
-    playSubtitlesAt(document.getElementById('subtitle'), LINES, clock);
+    // 시연 후 내레이션 자막은 화면에 띄우지 않는다 (playSubtitlesAt에 null → 대사 시각만 흘려보내 그 시각에 맞춘 어두운 막·버튼은 그대로)
+    playSubtitlesAt(null, LINES, clock);
     const shown = clock.at(SHOW_AT).then(() => {
       screenEl.classList.add('phase-show');
       console.info('[#15] 총정리 화면 표시');

@@ -120,6 +120,14 @@ var UnitySync = (function () {
       reach: function (v) { return wait(reachCond(v), t0 + base(v)); },
       // 개발 노트용: 영상 v의 ms 지점을 이 장면 기준 영상의 연속 시각으로
       noteTime: function (v, ms) { return base(v) - base(video) + ms; },
+      // 영상 v의 지금 재생 위치(ms, 시작부터 이어지는 시각). Unity와 연결되어 있는데 v가 아직 시작되지 않았으면 null.
+      // (태블릿 영상을 Unity 영상과 같은 위치로 맞출 때 쓴다 — js/intro-video.js)
+      now: function (v) {
+        if (v === undefined) v = video;
+        var n = performance.now();
+        if (connected()) return starts[v] != null ? n - starts[v] : null;
+        return n - (t0 + base(v));
+      },
     };
   }
 
@@ -156,7 +164,8 @@ function returnToDoor() {
 
 // 이전 관람객이 입력·선택한 값을 지운다 (#1에서)
 function clearVisitData() {
-  ['birth', 'constellationResult', 'fortunePeriod', 'fortuneTopic', 'fortuneResult'].forEach(function (k) {
+  // visitData: #6에서 판정한 별자리 ID·정보·별 이야기 (js/byeol-data.js)
+  ['birth', 'visitData', 'constellationResult', 'fortunePeriod', 'fortuneTopic', 'fortuneResult'].forEach(function (k) {
     try { sessionStorage.removeItem(k); } catch (e) {}
   });
 }
@@ -164,8 +173,9 @@ function clearVisitData() {
 // Tablet -> local Node server -> Unity. Does not block existing UI transitions.
 // 같은 명령을 2초 안에 다시 보내지 않고(중복 터치), 전송에 실패하면 3번까지 다시 시도한 뒤 콘솔에 남긴다.
 // 서버에 올라간 명령은 Unity가 그 명령의 대기 루프 영상에 들어갈 때까지 들고 있다가 적용한다 (WebBridge.cs).
+// extra: 명령과 함께 보낼 값. 지금은 birth의 { mansionId: 1~28 } 하나뿐 (#6에서 판정한 별자리 ID → Unity가 04 개별 영상을 고름)
 var unitySentAt = {};
-function sendUnityAction(action) {
+function sendUnityAction(action, extra) {
   if (!UnitySync.enabled()) {
     // 시연 중 테스트 도구의 '← 이전'/'다음 →'을 한 번이라도 누르면 #1에 다시 올 때까지 영상이 넘어가지 않는다
     console.warn('[Unity bridge] 테스트 도구(이전/다음)로 이동한 뒤라 Unity 동기화가 꺼져 있어 명령을 보내지 않음:', action, '→ #1(처음으로)에서 다시 켜짐');
@@ -181,14 +191,14 @@ function sendUnityAction(action) {
     fetch('/unity-command', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: action }),
+      body: JSON.stringify(Object.assign({ action: action }, extra || {})),
       cache: 'no-store',
       keepalive: true
     }).then(function (res) {
       if (!res.ok) throw new Error('HTTP ' + res.status);
       return res.json();
     }).then(function (data) {
-      console.info('[Unity bridge] 보냄:', action, '#' + data.id + (data.duplicate ? ' (서버에서 중복으로 처리)' : ''));
+      console.info('[Unity bridge] 보냄:', action + (data.mansionId ? ' (별자리 ID ' + data.mansionId + ')' : ''), '#' + data.id + (data.duplicate ? ' (서버에서 중복으로 처리)' : ''));
     }).catch(function (err) {
       if (n < 3) setTimeout(function () { attempt(n + 1); }, 400 * n);
       else console.error('[Unity bridge] 명령 전송 실패:', action, err);
@@ -282,7 +292,8 @@ window.addEventListener('pageshow', function (e) {
 });
 
 // ---------- [프로토타입 전용] 좌측 상단 테스트 도구 (이동 버튼 + 스크린 연출 노트) ----------
-// 완성본에서는 이 블록 전체, wireframe.css의 [프로토타입 전용] 스타일, 각 페이지의 showScreenNotes(...) 호출만 지우면 된다.
+// 개발을 재개할 때 아래 값을 true로 바꾸면 이동 버튼과 연출 노트를 다시 사용할 수 있다.
+var DEV_TOOLS_ENABLED = false;
 // 체험 순서 (다음 버튼용). 페이지를 추가·삭제·이름 변경하면 여기도 맞춰 줄 것
 var DEV_FLOW = [
   'page1_door.html',
@@ -321,6 +332,7 @@ function devPrevPage() {
 }
 
 function ensureDevTools() {
+  if (!DEV_TOOLS_ENABLED) return null;
   var tools = document.querySelector('.dev-tools');
   if (tools) return tools;
   tools = document.createElement('div');
@@ -330,6 +342,7 @@ function ensureDevTools() {
       '<button type="button" data-act="back">← 이전</button>' +
       '<button type="button" data-act="home">처음으로</button>' +
       '<button type="button" data-act="next">다음 →</button>' +
+      '<button type="button" data-act="notes" class="dev-notes-toggle"></button>' +
     '</div>' +
     '<div class="dev-notes">' +
       '<div class="dev-notes-head">스크린 영상 연출 (권장 타이밍)</div>' +
@@ -343,7 +356,17 @@ function ensureDevTools() {
     if (act === 'back') location.href = devPrevPage();
     if (act === 'home') location.href = 'page1_door.html';
     if (act === 'next') location.href = devNextPage();
+    if (act === 'notes') setNotesHidden(!tools.classList.contains('notes-hidden'));
   });
+  // '노트 접기': 연출 노트 상자 전체를 숨긴다 (이동 버튼만 남음). 모든 페이지에서 같은 상태를 유지한다
+  function setNotesHidden(hidden) {
+    tools.classList.toggle('notes-hidden', hidden);
+    tools.querySelector('.dev-notes-toggle').textContent = hidden ? '노트 펼치기' : '노트 접기';
+    try { localStorage.setItem('devNotesHidden', hidden ? '1' : ''); } catch (e) {}
+  }
+  var notesHidden = false;
+  try { notesHidden = !!localStorage.getItem('devNotesHidden'); } catch (e) {}
+  setNotesHidden(notesHidden);
   tools.querySelector('.dev-notes-head').addEventListener('click', function () {
     tools.classList.toggle('notes-collapsed');
     try { localStorage.setItem('devNotesCollapsed', tools.classList.contains('notes-collapsed') ? '1' : ''); } catch (e) {}
@@ -381,6 +404,7 @@ function formatSceneTime(ms) {
 //   목록의 시각과 경과도 영상 시각으로 보여준다 (스크린 영상의 타임코드와 바로 비교할 수 있도록)
 var devNotesTimer = null;
 function showScreenNotes(steps, opts) {
+  if (!DEV_TOOLS_ENABLED) return;
   opts = opts || {};
   var base = opts.videoStart != null ? opts.videoStart : 0;
   var total = opts.total != null ? opts.total - base : null;
@@ -426,6 +450,7 @@ function showScreenNotes(steps, opts) {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
+  if (!DEV_TOOLS_ENABLED) return;
   var tools = ensureDevTools();
   if (!tools.querySelector('.dev-notes-list').children.length) {
     showScreenNotes([{ at: 0, text: '(이 장면의 스크린 연출은 아직 정리 전)' }]);

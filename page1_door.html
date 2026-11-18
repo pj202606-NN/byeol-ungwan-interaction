@@ -57,16 +57,16 @@
   }
   @keyframes hintPulse {
     0% { transform: scale(0.6); opacity: 1; }
-    70% { transform: scale(1.6); opacity: 0; }
-    100% { transform: scale(1.6); opacity: 0; }
+    70% { transform: scale(3.2); opacity: 0; }   /* 퍼지는 크기 (시연 후 1.6 → 2.6 → 3.2) */
+    100% { transform: scale(3.2); opacity: 0; }
   }
   .door-caption {
     position: absolute;
     left: 0;
     right: 0;
     bottom: 90px;
-    font-size: 18px;
-    height: 30px;
+    font-size: 26px;   /* 시연 후 키움 (예전 18px) */
+    height: 42px;
     color: var(--color-muted);
     text-align: center;
   }
@@ -100,6 +100,7 @@
 <body>
   <script src="js/fit-screen.js"></script>
   <script src="js/nav.js"></script>
+  <script src="js/byeol-data.js"></script>
   <div class="screen bg-scene" id="screen">
     <video class="door-video" id="doorVideo" src="videos/door-idle-tablet.mp4" autoplay muted loop playsinline preload="auto"
            disablepictureinpicture disableremoteplayback></video>

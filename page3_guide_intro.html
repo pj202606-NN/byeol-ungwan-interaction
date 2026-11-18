@@ -12,9 +12,10 @@
   <script src="js/ambient.js"></script>
   <script src="js/subtitles.js"></script>
   <script src="js/timeline.js"></script>
-  <div class="screen bg-fade" id="screen">
-    <div class="milky-band"></div>
-    <div class="guide-subtitle" id="subtitle"></div>
+  <script src="js/desk-video.js"></script>
+  <div class="screen bg-room bg-desk" id="screen">
+    <div class="room-shade" id="shade"></div>
+    <div class="dawn-sparkles" id="sparkles"></div>
     <div class="page-index">#3 page3_guide_intro</div>
   </div>
 
@@ -22,15 +23,15 @@
     // 시각은 영상 02의 재생 시각(ms). 값과 자막은 js/timeline.js의 TIMELINE.page3에서 조절한다.
     const T = TIMELINE.page3;
     const clock = UnitySync.clock(T.video, T.fallback);
+    // #2에서 이어지는 책상 영상 + 아주 천천히 걷히는 검은 막 (예전 태블릿 인트로 영상은 쓰지 않는다, 2026-11-19)
+    DeskVideo.attach();
+    DeskVideo.dawn(document.getElementById('shade'), clock);
     const FADE = 900;            // #4로 넘어가는 페이드 길이
     const LINES = T.lines;
 
-    const subtitle = document.getElementById('subtitle');
-
     // 배경 연기 / 파티클 생성
-    const screenEl = document.getElementById('screen');
-    spawnSmoke(screenEl, 6, subtitle);
-    spawnHaze(screenEl, 34, subtitle);
+    // 어두운 화면이 심심하지 않게 반짝임만 (예전의 연기·은하수는 책상을 가려 뺐다)
+    spawnHaze(document.getElementById('sparkles'), 34);
 
     showScreenNotes([
       { at: clock.sceneStart, text: '도착한 우주 공간. 신비로운 은하수가 떠 있고, 말하는 동안 음파처럼 일렁임' },
@@ -38,9 +39,10 @@
       { at: T.fadeOutAt, text: '대사가 끝나며 스크린이 어두워짐(페이드 아웃) · 태블릿 #4로 전환' },
     ], { videoStart: clock.sceneStart, total: T.fadeOutAt + FADE });
 
-    // 마지막 자막은 따로 사라지지 않고 페이지 페이드 아웃과 함께 사라진다
-    playSubtitlesAt(subtitle, LINES, clock);
-    clock.at(T.fadeOutAt).then(() => goTo('page4_smoke_gate.html', FADE));
+    // 시연 후 내레이션 자막은 화면에 띄우지 않는다 (playSubtitlesAt에 null → 대사 시각만 흘려보내 그 시각에 맞춘 연출·버튼은 그대로)
+    playSubtitlesAt(null, LINES, clock);
+    // 책상 영상과 밝기가 끊기지 않도록 같은 문서에서 #4로 (예전 페이드 시간만큼 기다린 뒤 — 시각은 그대로)
+    clock.at(T.fadeOutAt).then(() => setTimeout(() => goToInPlace('page4_smoke_gate.html', { crossfade: FADE }), FADE));
   </script>
 </body>
 </html>

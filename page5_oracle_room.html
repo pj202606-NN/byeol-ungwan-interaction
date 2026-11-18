@@ -9,8 +9,9 @@
   /*
     스크린: 연기가 대문 안으로 들어감 → 별운관의 문이 열림 → 내부 전경 → 카메라가 책상 앞에 멈춤
             → 연기가 모여 점술가 등장 → 점술가의 설명
-    태블릿: 어두운 대기(입력 잠금) → 점술가의 연기가 모이기 시작하면 어두운 책상 화면 → 설명 자막 → 어두운 책상 그대로 #6으로
-    밝기는 .room-shade(oracle.css)의 불투명도로 조절한다. (dark → dim, 원래 밝기로는 #6에서 종이가 내려올 때)
+    태블릿: (#2부터 깔린 책상 위로 검은 막이 아주 천천히 걷히는 중, 입력 잠금) → 점술가의 연기가 모이기 시작하면 책상이 비교적 선명해짐(아직 어두움)
+            → 설명 자막 → 어두운 책상 그대로 #6으로
+    밝기는 .room-shade(oracle.css)의 불투명도로 조절한다. (deskAt까지 DeskVideo.dawn → 0.62, 원래 밝기로는 #6에서 종이가 내려올 때)
   */
   /* 어두운 대기 동안만 보이는 흐릿한 파티클 (#4에서 이어지는 느낌) */
   .shade-haze {
@@ -22,7 +23,6 @@
   .phase-desk .shade-haze,
   .phase-bright .shade-haze { opacity: 0; }
 
-  .guide-subtitle { z-index: 3; }
 </style>
 </head>
 <body>
@@ -31,15 +31,16 @@
   <script src="js/ambient.js"></script>
   <script src="js/subtitles.js"></script>
   <script src="js/timeline.js"></script>
+  <script src="js/desk-video.js"></script>
   <div class="screen bg-room bg-desk" id="screen">
-    <div class="room-shade"></div>
+    <div class="room-shade" id="shade"></div>
     <div class="shade-haze" id="haze"></div>
-    <div class="guide-subtitle" id="subtitle"></div>
     <div class="page-index">#5 page5_oracle_room</div>
   </div>
 
   <script>
     // 시각은 영상 02의 재생 시각(ms). 값과 자막은 js/timeline.js의 TIMELINE.page5에서 조절한다.
+    DeskVideo.attach();   // 책상 배경 영상 (js/desk-video.js). #2~#10은 같은 영상을 이어 쓴다
     const T = TIMELINE.page5;
     const clock = UnitySync.clock(T.video, T.fallback);
     const DESK_AT = T.deskAt;     // 점술가의 연기가 모이기 시작 · 태블릿: 어두운 책상 화면이 드러남
@@ -51,10 +52,17 @@
     spawnHaze(document.getElementById('haze'), 28);
 
     const screenEl = document.getElementById('screen');
-    const subtitle = document.getElementById('subtitle');
-
-    clock.at(DESK_AT).then(() => screenEl.classList.add('phase-desk'));
-    playSubtitlesAt(subtitle, LINES, clock);
+    // #2부터 이어지는 검은 막: deskAt까지는 아주 천천히, deskAt에 2.5초에 걸쳐 어두운 책상(0.62)으로 (그 뒤 #6에서 종이가 내려올 때 밝아짐)
+    const shade = document.getElementById('shade');
+    const stopDawn = DeskVideo.dawn(shade, clock);
+    clock.at(DESK_AT).then(() => {
+      stopDawn();
+      shade.style.transition = 'opacity 2.5s ease-in-out';
+      shade.style.opacity = '0.62';
+      screenEl.classList.add('phase-desk');
+    });
+    // 시연 후 내레이션 자막은 화면에 띄우지 않는다 (playSubtitlesAt에 null → 대사 시각만 흘려보내 그 시각에 맞춘 연출·버튼은 그대로)
+    playSubtitlesAt(null, LINES, clock);
     clock.at(NEXT_AT).then(() => goToInPlace('page6_birth_paper.html', { crossfade: CROSSFADE }));
 
     showScreenNotes([

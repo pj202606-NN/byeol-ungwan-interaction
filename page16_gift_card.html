@@ -19,6 +19,7 @@
 
   .card-stack {
     position: relative;
+    top: 24px;   /* 카드·버튼을 조금 아래로 (#17의 카드 자리와 같게) */
     z-index: 2;
     display: flex;
     flex-direction: column;
@@ -29,19 +30,12 @@
   #card.card-drop { visibility: visible; }
 
   /* 카드와 겹치지 않도록 자막은 화면 아래쪽에 */
-  .guide-subtitle {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 120px;
-    margin: 0 auto;
-    z-index: 3;
-  }
 </style>
 </head>
 <body>
   <script src="js/fit-screen.js"></script>
   <script src="js/nav.js"></script>
+  <script src="js/byeol-data.js"></script>
   <script src="js/ambient.js"></script>
   <script src="js/timeline.js"></script>
   <script src="js/subtitles.js"></script>
@@ -51,7 +45,6 @@
       <div class="card-object" id="card" style="width:340px; height:480px; margin-bottom:56px;"></div>
       <button class="btn btn-light reveal-btn" id="resultBtn">결과 카드 확인하기</button>
     </div>
-    <div class="guide-subtitle" id="subtitle"></div>
     <div class="page-index">#16 page16_gift_card</div>
   </div>
 
@@ -73,11 +66,18 @@
     const screenEl = document.getElementById('screen');
     const card = document.getElementById('card');
     const btn = document.getElementById('resultBtn');
+    // 결과 카드: 공통 뒷면 이미지(assets/cards/card_back.jpg). #17에서 이 카드가 뒤집히면 뒷면 + QR 자리가 나온다
+    const visit = ByeolData.requireVisit();
+    if (visit) {
+      ByeolData.fillCardBack(card);
+      ByeolData.loadQr(visit.mansionId).catch(() => {});   // #17에서 뒤집힐 면의 QR을 미리 받아 둔다
+    }
     const dropped = clock.at(CARD_DROP_AT).then(() => {
       card.classList.add('card-drop');
       return wait(CARD_DROP_MS);
     });
-    playSubtitlesAt(document.getElementById('subtitle'), LINES, clock)
+    // 시연 후 내레이션 자막은 화면에 띄우지 않는다 (playSubtitlesAt에 null → 대사 시각만 흘려보내 그 시각에 맞춘 어두운 막·버튼은 그대로)
+    playSubtitlesAt(null, LINES, clock)
       .then(() => Promise.all([dropped, wait(T.readyDelay), clock.reach(22)]))
       .then(() => {
         screenEl.classList.remove('phase-dim');

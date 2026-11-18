@@ -52,7 +52,8 @@ function lockInput() {
   ['pointerdown', 'click', 'touchstart', 'contextmenu'].forEach(function (type) {
     document.addEventListener(type, function (e) {
       if (!inputLocked) return;
-      if (e.target.closest && e.target.closest('.dev-tools')) return;
+      // 테스트 도구와 데이터 오류 안내('처음으로' 버튼, js/byeol-data.js)는 잠금 중에도 누를 수 있다
+      if (e.target.closest && e.target.closest('.dev-tools, .byeol-data-error')) return;
       e.preventDefault();
       e.stopPropagation();
     }, { passive: false, capture: true });

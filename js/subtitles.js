@@ -47,6 +47,7 @@ function subtitleCues(lines) {
 // clock: UnitySync.clock(...)로 만든 장면 시계 → Unity 영상의 실제 재생 시각에 맞춘다.
 //   숫자를 넘기면 이 장면의 스크립트가 실행되는 순간의 영상 시각(sceneStart)으로 보고 자체 타이머로 맞춘다.
 // 돌려주는 Promise는 마지막 자막이 다 사라진 순간에 끝난다 (마지막 자막에 out이 없으면 마지막 자막이 뜨는 순간)
+// el이 null이면 화면에 아무것도 띄우지 않고 시각만 똑같이 흘려보낸다 (#3~#10: 자막은 없애고, 대사 시각에 맞춘 버튼·어두운 막은 그대로)
 function playSubtitlesAt(el, lines, clock) {
   var cue = typeof clock === 'number'
     ? function (video, ms) { return subtitleWait(Math.max(0, ms - clock)); }
@@ -54,13 +55,14 @@ function playSubtitlesAt(el, lines, clock) {
   var done = Promise.resolve();
   subtitleCues(lines).forEach(function (c) {
     var shown = cue(c.video, c.show).then(function () {
+      if (!el) return;
       el.innerHTML = c.text;
       el.classList.add('show');
     });
     done = shown;
     if (c.hide != null) {
       done = cue(c.video, c.hide).then(function () { return shown; }).then(function () {
-        el.classList.remove('show');
+        if (el) el.classList.remove('show');
         return subtitleWait(SUBTITLE_FADE);
       });
     }

@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>별운관 체험 - #14 운세 해석</title>
+<title>별운관 체험 - #14 별 이야기 해석</title>
 <link rel="stylesheet" href="css/wireframe.css">
 <link rel="stylesheet" href="css/oracle.css">
 <style>
@@ -16,10 +16,7 @@
   .phase-dim .room-shade { opacity: 0.55; }
 
   /* 어두운 책상 위의 흰 글씨 (제목·결과 문장·상세 해석·펼침 표시) */
-  .result-wrap .title,
-  .result-wrap .subtitle,
-  .chevron-btn,
-  .detail-card { color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,0.75), 0 0 14px rgba(0,0,0,0.5); }
+  .result-wrap .title { color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,0.75), 0 0 14px rgba(0,0,0,0.5); }
 
   .result-wrap > * {
     opacity: 0;
@@ -28,10 +25,7 @@
   }
   .phase-show .result-wrap > * { opacity: 1; transform: translateY(0); }
   .phase-show .result-wrap > :nth-child(2) { transition-delay: 0.25s; }
-  .phase-show .result-wrap > :nth-child(3),
-  .phase-show .result-wrap > :nth-child(4),
-  .phase-show .result-wrap > :nth-child(5) { transition-delay: 0.5s; }
-  .phase-show .result-wrap > :nth-child(6) { transition-delay: 0.8s; }
+  .phase-show .result-wrap > :nth-child(3) { transition-delay: 0.8s; }
 
   .result-wrap {
     display: flex;
@@ -39,62 +33,44 @@
     align-items: center;
     z-index: 2;
   }
-  /* 바는 두루마리의 축, 상세 해석은 그 축 바로 아래에서 펼쳐지는 종이 */
-  .handle-bar {
-    position: relative;
-    z-index: 1;
-    width: 720px;
-    height: 28px;
-    border-radius: 14px;
-    background: linear-gradient(180deg, #6a6a6a 0%, #9a9a9a 100%);
-    cursor: pointer;
+  /* 결과 = 두루마리 (#9와 같은 모양, css/oracle.css의 .scroll): 결과가 나타날 때 위쪽에 말린 채 나타나 아래로 펼쳐지고,
+     안에 간략 → 짧은 금색 구분선 → 상세 (2026-11-19, 예전의 축을 눌러 상세를 펼치던 방식 대신) */
+  .result-scroll { width: calc(760px * var(--ui)); margin-top: calc(26px * var(--ui)); }
+  .result-scroll .scroll-paper { --unroll-delay: 0.45s; }
+  .result-scroll .inner { padding: calc(54px * var(--ui)) calc(48px * var(--ui)); text-align: center; }   /* 위아래를 넉넉히 (예전 30px) */
+  .result-brief {
+    font-family: 'BonMyeongjo', 'Malgun Gothic', serif;
+    font-size: calc(20px * var(--ui));   /* 예전 22px에서 살짝 줄임 */
+    line-height: 1.7;
   }
-  .chevron-btn {
-    margin: 10px 0 28px;
-    font-size: 16px;
-    color: #fff;
-    cursor: pointer;
+  .scroll-divider {
+    width: calc(56px * var(--ui));
+    height: 1px;
+    margin: calc(34px * var(--ui)) auto;   /* 간략 ↔ 구분선 ↔ 상세 간격 (예전 20px) */
+    background: var(--card-gold);
   }
-  .detail-card {
-    width: 690px;
-    max-height: 0;
-    overflow: hidden;
-    background: linear-gradient(180deg, #3a3a3a 0%, #8a8a8a 100%);
-    border-radius: 0 0 8px 8px;
-    font-size: 18px;
-    line-height: 1.8;
-    transition: max-height 0.7s cubic-bezier(.22,.61,.36,1);
-  }
-  /* 3줄이 넘는 상세 해석도 넉넉히 들어가도록 */
-  .detail-card .inner {
-    min-height: 300px;
-    padding: 32px 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-sizing: border-box;
-  }
-  .detail-card.open {
-    max-height: 460px;
-  }
+  .result-detail { font-size: calc(18px * var(--ui)); line-height: 1.8; }
 </style>
 </head>
 <body>
   <script src="js/fit-screen.js"></script>
   <script src="js/nav.js"></script>
+  <script src="js/byeol-data.js"></script>
   <script src="js/ambient.js"></script>
   <div class="screen bg-room bg-desk" id="screen">
     <div class="room-shade"></div>
     <div class="result-wrap">
-      <div class="title" id="resultTitle" style="font-size:30px; font-family:'KoPub Batang Medium', 'Malgun Gothic', sans-serif;">올해의 관계운</div>
-      <div class="subtitle" style="max-width:1100px; text-align:center; font-family:'KoPub Batang Medium', 'Malgun Gothic', sans-serif;">
-        올해는 새로운 인연과 기회가 찾아오는 해입니다.<br>
-        다만 급한 결정은 피하고 신중하게 접근하는 것이 좋겠습니다.
+      <div class="title" id="resultTitle" style="font-size:calc(30px * var(--ui)); font-family:'BonMyeongjo', 'Malgun Gothic', sans-serif;"></div>
+      <div class="scroll result-scroll" id="resultScroll">
+        <div class="scroll-rod"></div>
+        <div class="scroll-paper" id="resultPaper"><div class="inner">
+          <div class="result-brief" id="resultBrief"></div>
+          <div class="scroll-divider"></div>
+          <div class="result-detail" id="resultDetail"></div>
+        </div></div>
+        <div class="scroll-rod"></div>
       </div>
-      <div class="handle-bar" id="handleBar"></div>
-      <div class="detail-card" id="detailCard"><div class="inner">상세 해석</div></div>
-      <div class="chevron-btn" id="chevron">⌄</div>
-      <div style="display:flex; gap:40px; margin-top:56px;">
+      <div style="display:flex; gap:40px; margin-top:calc(80px * var(--ui));">
         <button class="btn btn-light" id="otherBtn">다른 이야기 듣기</button>
         <button class="btn btn-light" id="finishBtn">이야기 마치기</button>
       </div>
@@ -105,30 +81,47 @@
   <script>
     // 타이밍 (단위: ms)
     const SHOW_AT = 300;       // #13에서 이어진 뒤 결과가 나타나기 시작
-    const UNLOCK_AT = 2000;    // 결과와 버튼이 다 나타난 뒤 입력 허용
+    const UNLOCK_AT = 2400;    // 결과와 버튼이 다 나타나고 두루마리가 다 펼쳐진 뒤 입력 허용 (0.3 + 펼침 시작 0.45 + 1.5초)
 
-    // #11·#12에서 고른 시기·주제로 제목을 만든다 (예: 올해의 관계운). 실제 해석 문장은 운세 데이터가 붙으면 교체
-    const PERIOD_LABEL = { today: '오늘의', month: '이달의', year: '올해의' };
-    try {
-      const period = PERIOD_LABEL[sessionStorage.getItem('fortunePeriod')];
-      const topic = sessionStorage.getItem('fortuneTopic');
-      if (period && topic) document.getElementById('resultTitle').textContent = `${period} ${topic}운`;
-    } catch (e) {}
+    // #11·#12에서 고른 시기·주제로 제목을 만들고 (예: 올해의 별 이야기 - 관계), #13에서 꺼낸 이야기의 간략 → 결과 문장, 상세 → 상세 해석.
+    // '운세 흐름'(길·보통·주의)은 이 화면에 보이지 않는다 (#15에서 씀).
+    (function fillResult() {
+      let period = null, topic = null, story = null;
+      try {
+        period = sessionStorage.getItem('fortunePeriod');
+        topic = sessionStorage.getItem('fortuneTopic');
+        const saved = JSON.parse(sessionStorage.getItem('fortuneResult'));
+        story = saved && saved.fortune;
+      } catch (e) {}
+      // #13의 결과가 지금 고른 시기·주제와 다르면(테스트 도구로 건너뜀 등) 세션 기록에서 다시 꺼낸다
+      if (!story || story.period !== period || story.category !== topic) {
+        const visit = ByeolData.getVisit();
+        story = visit && ByeolData.getStory(visit, period, topic);
+      }
+      document.getElementById('resultTitle').textContent = ByeolData.storyTitle(period, topic);
+      if (!story) { ByeolData.showVisitError(ByeolData.MESSAGES.storyMissing); return; }
+      const summary = topic === '종합' && !story.notOpen;
+      document.querySelector('.scroll-divider').hidden = !summary;
+      document.getElementById('resultDetail').hidden = !summary;
+      if (story.notOpen) {   // (예전 데이터용. 지금 데이터는 날짜 범위 밖이어도 첫날·마지막 날 이야기가 있어 들어오지 않는다)
+        document.getElementById('resultBrief').textContent = story.message;
+        document.getElementById('resultDetail').textContent = story.message;
+        return;
+      }
+      document.getElementById('resultBrief').textContent = summary ? story.brief : story.detail;
+      document.getElementById('resultDetail').textContent = summary ? story.detail : '';
+    })();
 
     lockInput();
     const screenEl = document.getElementById('screen');
-    setTimeout(() => screenEl.classList.add('phase-dim', 'phase-show'), SHOW_AT);
+    setTimeout(() => {
+      screenEl.classList.add('phase-dim', 'phase-show');
+      // 두루마리: 말린 상태(높이 0)에서 글 길이만큼 아래로 펼친다 (CSS transition)
+      const paper = document.getElementById('resultPaper');
+      paper.style.maxHeight = paper.scrollHeight + 'px';
+    }, SHOW_AT);
     setTimeout(unlockInput, UNLOCK_AT);
 
-    function toggleDetail() {
-      const card = document.getElementById('detailCard');
-      const chevron = document.getElementById('chevron');
-      const open = !card.classList.contains('open');
-      card.classList.toggle('open', open);
-      chevron.textContent = open ? '⌃' : '⌄';
-    }
-    document.getElementById('handleBar').addEventListener('click', toggleDetail);
-    document.getElementById('chevron').addEventListener('click', toggleDetail);
     document.getElementById('otherBtn').addEventListener('click', () => { lockInput(); goTo('page12_keyword_select.html'); });
     // 이야기 마치기: 화면 위 요소가 스르륵 사라지고, 같은 책상 그대로 #15로 끊김 없이 이어진다
     const FINISH_FADE_MS = 900;

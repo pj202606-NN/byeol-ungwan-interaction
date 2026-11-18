@@ -1,14 +1,11 @@
-@font-face {
-  font-family: 'KoPub Batang Medium';
-  src: url('../fonts/KoPubWorld%20Batang%20Medium.ttf') format('truetype');
-  font-weight: 500;
-  font-style: normal;
-}
 
 /*
-  Pretendard 로컬 파일 자리. public/fonts에 아래 파일명으로 넣으면 바로 적용됨
-  (jsDelivr 배포판 기준 파일명 - 실제 파일명이 다르면 이 세 src 경로만 바꾸면 됨).
-  파일이 아직 없어도 로드만 실패할 뿐 자동으로 맑은 고딕으로 대체된다.
+  글꼴 (모두 public/fonts에 로컬 보관, 외부 CDN 없음 — 전시장 오프라인에서도 동작)
+  - Pretendard: 본문·버튼·안내 등 일반 UI. 공식 배포(github.com/orioncactus/pretendard) 웹폰트 woff2 400·500·700, 예비로 otf.
+    라이선스 SIL OFL 1.1 (fonts/Pretendard-LICENSE.txt)
+  - 본명조(Source Han Serif KR): 명조가 필요한 글자(대사·질문 문장·종이 글씨·별 이야기 본문·별자리 이름).
+    공식 배포(github.com/adobe-fonts/source-han-serif) SubsetOTF/KR Medium. 라이선스 SIL OFL 1.1 (fonts/SourceHanSerif-LICENSE.txt)
+    예전 KoPub 바탕을 쓰던 곳도 모두 본명조로 바꿨다 (2026-11-19)
 */
 @font-face {
   font-family: 'Pretendard';
@@ -32,6 +29,14 @@
        url('../fonts/Pretendard-Bold.otf') format('opentype');
 }
 
+@font-face {
+  font-family: 'BonMyeongjo';
+  font-weight: 100 900;   /* Medium 한 굵기를 모든 굵기에 쓴다 (가짜 굵게 만들지 않음) */
+  font-style: normal;
+  src: local('Source Han Serif KR Medium'), local('SourceHanSerifKR-Medium'),
+       url('../fonts/SourceHanSerifKR-Medium.otf') format('opentype');
+}
+
 :root {
   --screen-width: 1920px;
   --screen-height: 1080px;
@@ -41,6 +46,9 @@
   --color-fg: #d6d6d6;
   --color-muted: #8a8a8a;
   --color-border: #4a4a4a;
+  /* UI 확대 배율 (#6~#17의 글자·글상자·버튼, 2026-11-19 1.0 → 1.1). 배경·카드 그림·애니메이션에는 쓰지 않는다.
+     글자 크기와 그 글자를 담는 상자(폭·높이·여백)를 함께 calc(원래 px × var(--ui))로 키운다 */
+  --ui: 1.1;
 }
 
 * {
@@ -55,6 +63,11 @@ html, body {
   overflow: hidden;
   background: #000;
   font-family: "Pretendard", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+}
+/* 버튼·입력칸은 브라우저 기본값이 body 글꼴을 상속하지 않아(Chrome: Arial 등) Pretendard가 빠져 있었다.
+   글꼴을 따로 지정하지 않은 폼 요소만 위 글꼴을 따르게 한다 (본명조 등 따로 지정한 곳은 그대로) */
+button, input, select, textarea {
+  font-family: inherit;
 }
 
 /* 페이지 진입/이탈 시 전체 화면 크로스페이드 (js/nav.js의 goTo()와 짝) */
@@ -109,7 +122,7 @@ body.page-fade-out {
 }
 
 .title {
-  font-size: 38px;
+  font-size: calc(38px * var(--ui));
   font-weight: 500;
   margin: 0 0 24px;
   line-height: 1.4;
@@ -117,7 +130,7 @@ body.page-fade-out {
 }
 
 .subtitle {
-  font-size: 22px;
+  font-size: calc(22px * var(--ui));
   font-weight: 400;
   color: var(--color-muted);
   margin: 0 0 40px;
@@ -125,10 +138,10 @@ body.page-fade-out {
 }
 
 .btn {
-  min-height: 60px;
-  min-width: 200px;
-  padding: 0 40px;
-  font-size: 19px;
+  min-height: calc(60px * var(--ui));
+  min-width: calc(200px * var(--ui));
+  padding: 0 calc(40px * var(--ui));
+  font-size: calc(19px * var(--ui));
   font-weight: 400;
   background: transparent;
   border: 1px solid var(--color-border);
@@ -230,6 +243,10 @@ body.page-fade-out {
 }
 .notes-collapsed .dev-notes-list,
 .notes-collapsed .dev-notes-foot {
+  display: none;
+}
+/* '노트 접기' 버튼: 노트 상자 전체를 숨긴다 */
+.notes-hidden .dev-notes {
   display: none;
 }
 .dev-notes-list {

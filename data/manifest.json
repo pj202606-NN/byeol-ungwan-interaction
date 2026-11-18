@@ -1,0 +1,9 @@
+{
+  "설명": "태블릿 화면이 실제로 읽는 데이터 파일 목록. js/byeol-data.js와 build-static.js가 이 파일만 보고 불러오거나 배포한다. archive/의 예전 파일(v3·v4·v5·v6)은 쓰지 않고 배포하지도 않는다. 오늘 이야기의 날짜 범위(dailyStart~dailyEnd)와 범위 밖 규칙은 stories 파일 안의 설정을 그대로 쓴다.",
+  "files": {
+    "reference": "byeolungwan_28su_birthdate_reference.json",
+    "stories": "byeolungwan_fortunes_2026-11-20_24.json",
+    "descriptions": "byeolungwan_28su_keyring_descriptions.json",
+    "keywords": "byeolungwan_28su_keywords_from_v6.json"
+  }
+}

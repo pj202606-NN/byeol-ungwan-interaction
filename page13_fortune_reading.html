@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>별운관 체험 - #13 운세 해석 중</title>
+<title>별운관 체험 - #13 별 이야기 해석 중</title>
 <link rel="stylesheet" href="css/wireframe.css">
 <link rel="stylesheet" href="css/oracle.css">
 <style>
@@ -27,11 +27,17 @@
     height: 0;
     z-index: 2;
   }
+  /* 빛 색 = 고른 이야기의 운세 흐름 (2026-11-19). 오늘 이야기만 흐름(길·보통·주의)이 있고, 이달·올해는 예전 보랏빛.
+     예전보다 조금 더 선명하게 (빛무리 진하기 0.22 → 0.34) */
+  #screen { --glow: 230, 220, 255; --star: #f4f0ff; }
+  #screen[data-flow="길"] { --glow: 255, 212, 140; --star: #fff3d8; }
+  #screen[data-flow="보통"] { --glow: 196, 214, 255; --star: #eef4ff; }
+  #screen[data-flow="주의"] { --glow: 255, 140, 130; --star: #ffe7e2; }
   .reading-star {
     position: absolute;
     border-radius: 50%;
-    background: #f4f0ff;
-    box-shadow: 0 0 6px 2px rgba(225, 215, 255, 0.45), 0 0 16px 5px rgba(210, 200, 255, 0.15);
+    background: var(--star);
+    box-shadow: 0 0 7px 2px rgba(var(--glow), 0.6), 0 0 18px 6px rgba(var(--glow), 0.22);
     opacity: 0;
     will-change: transform, opacity;
   }
@@ -42,12 +48,12 @@
     width: 360px;
     height: 360px;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(230, 220, 255, 0.22) 0%, rgba(200, 190, 255, 0.07) 40%, rgba(0, 0, 0, 0) 70%);
+    background: radial-gradient(circle, rgba(var(--glow), 0.34) 0%, rgba(var(--glow), 0.11) 40%, rgba(0, 0, 0, 0) 70%);
     opacity: 0;
     transform: scale(0.7);
     transition: opacity 2.5s ease, transform 2.5s ease;
   }
-  .phase-reading .core-glow { opacity: 0.6; transform: scale(0.9); }
+  .phase-reading .core-glow { opacity: 0.8; transform: scale(0.9); }   /* 해석 중 (예전 0.6보다 조금 더 선명하게) */
   .phase-closing .core-glow { opacity: 1; transform: scale(1.25); transition-duration: 1.8s; }
   /* #14로 넘어가기 직전: 별빛과 어둠이 걷힌다 */
   .phase-out .room-shade { opacity: 0; transition-duration: 1s; }
@@ -57,6 +63,7 @@
 <body>
   <script src="js/fit-screen.js"></script>
   <script src="js/nav.js"></script>
+  <script src="js/byeol-data.js"></script>
   <script src="js/ambient.js"></script>
   <script src="js/timeline.js"></script>
   <div class="screen bg-room bg-desk" id="screen">
@@ -84,9 +91,18 @@
       };
     } catch (e) {}
 
-    // 임시 구현: 실제 운세 데이터 요청으로 바뀔 자리. 결과는 다음 장면에서 쓰도록 저장해 둔다.
+    // #6에서 저장한 이 관람객의 별 이야기(js/byeol-data.js) 중 고른 시기·주제 하나를 꺼낸다. 결과는 다음 장면(#14)에서 쓰도록 저장해 둔다.
+    // 연출 시간은 그대로: 결과가 바로 나와도 READING_MIN과 영상 17의 closingAt까지 해석 루프를 보여 준다 (아래 play()).
+    // 기록이 없거나 찾지 못하면 안내를 띄우고 해석 루프에 머문다 — 임의의 이야기로 넘어가지 않는다.
     function fetchFortune(p) {
-      return new Promise((resolve) => setTimeout(() => resolve({ picks: p, fortune: null }), 300));
+      const visit = ByeolData.requireVisit();
+      const story = visit && ByeolData.getStory(visit, p.period, p.topic);
+      if (!story) {
+        if (visit) ByeolData.showVisitError(ByeolData.MESSAGES.storyMissing);
+        console.error('[#13] 별 이야기 조회 실패', p);
+        return new Promise(() => {});
+      }
+      return Promise.resolve({ picks: p, fortune: story });
     }
 
     // 영상 17(운세 공개)의 시각 (js/timeline.js의 TIMELINE.page13)
@@ -95,6 +111,12 @@
 
     lockInput();
     const screenEl = document.getElementById('screen');
+    // 빛 색: 고른 이야기의 운세 흐름(오늘만 있음)을 그대로 쓴다. 없으면 예전 보랏빛 (임의로 정하지 않는다)
+    (function setFlowColor() {
+      const visit = ByeolData.getVisit();
+      const story = visit && ByeolData.getStory(visit, picks.period, picks.topic);
+      if (story && story.flow) screenEl.dataset.flow = story.flow;
+    })();
     const field = document.getElementById('field');
     const rand = (min, max) => min + Math.random() * (max - min);
 
@@ -127,7 +149,7 @@
         const a = s.angle + t * s.speed;
         const r = s.r * (1 + 0.08 * Math.sin(t * 0.0009 + s.phase)) * (1 + 0.15 * Math.max(0, level - 1));
         const twinkle = 0.65 + 0.35 * Math.sin(t * 0.003 + s.phase);
-        const base = level <= 1 ? 0.45 * level : 0.45 + 0.5 * (level - 1);
+        const base = level <= 1 ? 0.55 * level : 0.55 + 0.45 * (level - 1);   // 예전보다 조금 더 선명하게 (0.45 → 0.55)
         s.el.style.transform = `translate(${Math.cos(a) * r}px, ${Math.sin(a) * r * 0.82}px)`;
         s.el.style.opacity = base * twinkle;
       });

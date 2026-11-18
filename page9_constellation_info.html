@@ -30,13 +30,13 @@
     height: 480px;
     transition: left 1.1s cubic-bezier(.65,0,.35,1);
   }
-  .phase-info .card-object.info-card { left: 494px; } /* 카드 340 + 간격 72 + 정보 520 을 가운데 정렬 */
+  .phase-info .card-object.info-card { left: calc((1920px - 340px - 72px - 520px * var(--ui)) / 2 - 60px); } /* 정보가 펼쳐지면 카드도 기존보다 60px 왼쪽으로 */
 
   .detail-info.info-side {
     position: absolute;
-    left: 906px;   /* 494 + 340 + 72 */
-    top: 242px;
-    width: 520px;
+    left: calc((1920px - 340px - 72px - 520px * var(--ui)) / 2 - 60px + 340px + 20px);   /* 카드는 고정, 텍스트 영역만 20px 더 왼쪽으로 */
+    top: 204px;   /* 이름·정보·두루마리를 함께 12px 아래로 */
+    width: calc(720px * var(--ui));
     z-index: 2;
   }
   .info-side > * {
@@ -58,15 +58,28 @@
   /* 어두운 책상 위에서도 잘 읽히도록 정보 글씨를 희게 */
   .info-side .name,
   .info-side .row { color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,0.75), 0 0 14px rgba(0,0,0,0.5); }
-  .info-side .accordion-btn { color: #fff; border-color: rgba(255,255,255,0.75); background: rgba(0,0,0,0.4); }
-  .info-side .accordion-panel { color: #fff; background: rgba(0,0,0,0.6); }
 
+  /* 별자리 정보 (js/byeol-data.js): 항목 이름 + 값. 키워드도 넓어진 오른쪽 공간을 사용한다 */
+  .info-side .name .hanja { margin-left: 14px; font-size: calc(22px * var(--ui)); opacity: 0.8; }
+  /* 별자리 이름만 본명조 (css/wireframe.css의 BonMyeongjo), 30px → 32px. 한자·나머지 정보는 그대로 */
+  #infoName { font-family: 'BonMyeongjo', "Pretendard", "Malgun Gothic", sans-serif; font-size: calc(32px * var(--ui)); }
+  .info-side .row { display: flex; gap: 20px; line-height: 1.5; }
+  .info-side .row .key { flex: 0 0 calc(104px * var(--ui)); opacity: 0.7; }
+  .info-side .row .val { flex: 1; }
+  .info-side .row .val { word-break: keep-all; }
+  #infoKeywords { white-space: nowrap; }
+
+  /* 상세 설명 = 두루마리 (공용 모양은 css/oracle.css의 .scroll). 정보가 나타난 뒤 1.25초에 펼치기 시작 */
+  .info-side .scroll-paper { --unroll-delay: 1.25s; font-size: calc(17px * var(--ui)); }
+  .info-side .scroll-paper .inner { white-space: pre-line; padding: calc(28px * var(--ui)) calc(32px * var(--ui)); }
+  /* '다음'은 화면 아래 가운데 (2026-11-19, 예전 오른쪽 아래) */
   #nextBtn {
     top: auto;
-    left: auto;
-    right: 140px;
+    left: 50%;
+    right: auto;
     bottom: 90px;
-    background: transparent;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.6);
     border-color: #fff;
     opacity: 0;
     pointer-events: none;
@@ -78,19 +91,22 @@
 <body>
   <script src="js/fit-screen.js"></script>
   <script src="js/nav.js"></script>
+  <script src="js/byeol-data.js"></script>
   <script src="js/ambient.js"></script>
+  <script src="js/desk-video.js"></script>
   <div class="screen bg-room bg-desk" id="screen">
     <div class="room-shade"></div>
     <div class="desk-shade"></div>
     <div class="card-object info-card" id="card"></div>
     <div class="detail-info info-side">
-      <div class="name">별자리 이름</div>
-      <div class="row">소속 사신수</div>
-      <div class="row">상징 동물</div>
-      <div class="row" style="margin-bottom:40px;">성격 키워드</div>
-      <button class="accordion-btn" id="toggleBtn">상세 설명 보기</button>
-      <div class="accordion-panel" id="detailPanel" style="width:520px;">
-        <div class="inner">상세 설명 텍스트</div>
+      <div class="name"><span id="infoName">별자리 이름</span><span class="hanja" id="infoHanja"></span></div>
+      <div class="row"><span class="key">소속 사신수</span><span class="val" id="infoSashin"></span></div>
+      <div class="row"><span class="key">상징 동물</span><span class="val" id="infoAnimal"></span></div>
+      <div class="row" style="margin-bottom:40px;"><span class="key">성격 키워드</span><span class="val" id="infoKeywords"></span></div>
+      <div class="scroll" id="detailScroll">
+        <div class="scroll-rod"></div>
+        <div class="scroll-paper" id="detailPaper"><div class="inner" id="infoIntro"></div></div>
+        <div class="scroll-rod"></div>
       </div>
     </div>
     <button class="corner-btn" id="nextBtn">다음</button>
@@ -98,6 +114,28 @@
   </div>
 
   <script>
+    DeskVideo.attach();   // 책상 배경 영상 (js/desk-video.js)
+    // #6에서 판정한 별자리 정보: 생일 기준(이름·한자·사신수·동물) + 키워드(v6 원문에서 분리) + 소개 문구(결과_소개)
+    (function fillInfo() {
+      const visit = ByeolData.requireVisit();
+      if (!visit) return;
+      const p = visit.profile;
+      ByeolData.fillCard(document.getElementById('card'), p);
+      document.getElementById('infoName').textContent = p.name;
+      // 한자 표기: 데이터의 '정(井)' → '정수 · 井' (화면 표기만 바꾼다. 형식이 다르면 데이터 그대로)
+      const mm = /^(.+)\((.+)\)$/.exec(p.mansion);
+      document.getElementById('infoHanja').textContent = mm ? mm[1] + '수 · ' + mm[2] : p.mansion;
+      document.getElementById('infoSashin').textContent = p.sashin;
+      document.getElementById('infoAnimal').textContent = p.animal;
+      document.getElementById('infoKeywords').textContent = p.keywords.join(' · ');
+      ByeolData.load().then((db) => {
+        const intro = document.getElementById('infoIntro');
+        if (!intro) return;
+        intro.textContent = db.mansions[p.id].intro;
+        const paper = document.getElementById('detailPaper');
+        if (document.getElementById('screen').classList.contains('phase-info')) paper.style.maxHeight = paper.scrollHeight + 'px';
+      }).catch((error) => ByeolData.showVisitError(error.message));
+    })();
     // 타이밍 (단위: ms)
     const DIM_AT = 300;       // 점술가가 비켜주기 시작하면서 태블릿이 살짝 어두워짐 (입력 잠금)
     const REVEAL_AT = 3000;   // 밤하늘에 별자리가 선명하게 떠오르는 순간: 카드가 밝아지며 왼쪽으로, 정보가 나타남 (책상은 어두운 채)
@@ -109,16 +147,12 @@
     setTimeout(() => {
       screenEl.classList.remove('phase-dim');
       screenEl.classList.add('phase-info');
+      // 두루마리: 말린 상태(높이 0)에서 글 길이만큼 아래로 펼친다 (CSS transition, 정보가 나타난 뒤 시작)
+      const paper = document.getElementById('detailPaper');
+      paper.style.maxHeight = paper.scrollHeight + 'px';
     }, REVEAL_AT);
     setTimeout(unlockInput, UNLOCK_AT);
 
-    document.getElementById('toggleBtn').addEventListener('click', () => {
-      const panel = document.getElementById('detailPanel');
-      const btn = document.getElementById('toggleBtn');
-      const open = !panel.classList.contains('open');
-      panel.classList.toggle('open', open);
-      btn.textContent = open ? '상세 설명 닫기' : '상세 설명 보기';
-    });
     // 다음: 정보와 버튼은 바로 사라지고, 카드는 그 자리에서 곧장 화면 위로(스크린 속 점술가에게) 올라간다
     // → 같은 어두운 책상 그대로 #10으로 끊김 없이 이어진다 (?risen: #10은 카드가 이미 올라간 상태에서 시작)
     const RISE_MS = 1300;     // 카드가 올라가는 시간 (oracle.css cardRise)
@@ -137,7 +171,7 @@
       { at: 0, text: '별자리 반복 영상에서 이어짐: 점술가가 손을 느슨히 아래로 내리고, 연기로 된 몸이 흩어지듯 좌우로 살짝 퍼지며 자리를 비켜줌 · 태블릿: 살짝 어두워지고 입력 잠금' },
       { at: 1800, text: '점술가가 앉아 있던 자리 바로 뒤, 정면의 열린 큰 창으로 바깥 밤하늘이 드러남' },
       { at: REVEAL_AT, text: '밤하늘에 관람객의 별자리가 선명하게 떠오름: 별들이 선으로 이어지고, 그 실루엣을 따라 상징 동물이 선화로 그려짐 ("내 별자리가 이거구나!" 알 수 있게 크고 분명하게) · 태블릿: 카드가 다시 밝아지며 왼쪽으로 밀려나고 오른쪽에 별자리 정보가 나타남 (책상은 어두운 채)' },
-      { at: UNLOCK_AT, text: '루프(영상 06): 밤하늘의 별자리와 동물 형상은 그대로 유지, 실내에는 좌우에 맴도는 연기와 빛만 은은하게 움직임. 관람객이 상세 설명을 보고 "다음"을 누를 때까지 반복 (다음을 누르면 영상 07, 태블릿 #10으로)' },
+      { at: UNLOCK_AT, text: '루프(영상 06): 밤하늘의 별자리와 동물 형상은 그대로 유지, 실내에는 좌우에 맴도는 연기와 빛만 은은하게 움직임. 관람객이 두루마리의 상세 설명을 읽고 "다음"을 누를 때까지 반복 (다음을 누르면 영상 07, 태블릿 #10으로)' },
     ], { total: UNLOCK_AT, waitInput: true });
   </script>
 </body>

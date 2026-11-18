@@ -11,7 +11,10 @@
   <script src="js/nav.js"></script>
   <script src="js/ambient.js"></script>
   <script src="js/timeline.js"></script>
-  <div class="screen bg-fade" id="screen">
+  <script src="js/desk-video.js"></script>
+  <div class="screen bg-room bg-desk" id="screen">
+    <div class="room-shade" id="shade"></div>
+    <div class="dawn-sparkles" id="sparkles"></div>
     <div class="page-index">#2 page2_transition</div>
   </div>
 
@@ -20,7 +23,10 @@
     // Unity와 연결되어 있으면 영상 02가 실제로 시작된 시점을 기준으로 진행하고, 아니면 자체 타이머로 진행한다.
     const T = TIMELINE.page2;
     const clock = UnitySync.clock(T.video, T.fallback);
-    const FADE = 1200;           // #3으로 넘어가는 페이드 길이
+    const FADE = 1200;           // #3으로 넘어갈 때 반짝임이 겹쳐 바뀌는 시간 (예전 페이드 길이 그대로: #3은 spaceAt + 1.2초에 시작)
+    // 문을 누른 뒤부터 책상 영상이 깔려 있고, 검은 막이 아주 천천히 걷힌다 (거의 검은 화면 + 반짝임으로 보임)
+    DeskVideo.attach();
+    DeskVideo.dawn(document.getElementById('shade'), clock);
 
     showScreenNotes([
       { at: clock.sceneStart, text: '스크린 연출 시작 (카메라가 아래로 내려가는 듯한 효과)' },
@@ -31,9 +37,10 @@
     ], { videoStart: clock.sceneStart, total: T.spaceAt + FADE });
 
     lockInput();
-    spawnHaze(document.getElementById('screen'), 28);
+    spawnHaze(document.getElementById('sparkles'), 28);
 
-    clock.at(T.spaceAt).then(() => goTo('page3_guide_intro.html', FADE));
+    // 책상 영상과 밝기가 끊기지 않도록 같은 문서에서 #3으로 (넘어가는 시각은 예전 페이드가 끝나던 때와 같게)
+    clock.at(T.spaceAt).then(() => setTimeout(() => goToInPlace('page3_guide_intro.html', { crossfade: FADE }), FADE));
   </script>
 </body>
 </html>

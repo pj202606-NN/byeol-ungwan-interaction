@@ -56,6 +56,43 @@
 .bg-desk {
   background-image: url('../images/fortune-desk-bg.png'), url('../assets/bg-oracle-room.png');
 }
+/* #5~#10 책상 배경 영상 (js/desk-video.js). 책상 이미지와 같은 자리(cover, center)에 깔리고,
+   z-index -1이라 화면(.screen)의 배경 이미지 바로 위, 어두운 막·종이·카드·글씨·버튼보다는 항상 아래에 그려진다.
+   재생되기 전(.ready 전)과 잠시 걷어 낼 때(.desk-hidden)는 투명해서 아래의 책상 이미지가 보인다. 터치는 통과 */
+.desk-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+.desk-video.ready { opacity: 1; }
+.desk-video.ready.desk-hidden { opacity: 0; }
+/* #3~#5 태블릿 인트로 영상 (js/intro-video.js). 화면 전체를 덮는 맨 위 층(장면 내용 위, 개발용 페이지 번호 아래).
+   재생 전에는 투명해서 기존 #3 화면이 보이고, 재생이 시작되면 1초에 걸쳐 나타난다. 터치는 통과 */
+.intro-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 20;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 1s ease;
+}
+.intro-video.ready { opacity: 1; }
+.intro-video::-webkit-media-controls,
+.intro-video::-webkit-media-controls-start-playback-button,
+.intro-video::-webkit-media-controls-overlay-play-button { display: none !important; -webkit-appearance: none; }
+.desk-video::-webkit-media-controls,
+.desk-video::-webkit-media-controls-start-playback-button,
+.desk-video::-webkit-media-controls-overlay-play-button { display: none !important; -webkit-appearance: none; }
 
 /* ---------- 대사/선택 버튼 ---------- */
 .dialogue-box {
@@ -130,8 +167,45 @@
   align-items: center;
   justify-content: center;
   color: var(--color-fg);
-  font-size: 16px;
+  font-size: calc(16px * var(--ui));
   z-index: 2;
+}
+/* 카드 이미지(assets/cards/, js/byeol-data.js의 fillCard·fillCardBack): 카드 자리의 크기·위치·애니메이션은 그대로 두고
+   자리의 회색 바탕은 걷어 낸 뒤, 자리 높이에 맞춰 원본 비율(1748×3591) 그대로 가운데에 놓는다 (찌그러뜨리지 않음).
+   그림 확대: 이미지 가장자리를 좌우 4%, 위아래 2%씩 잘라 낸다 (늘이지 않으므로 비율 그대로. 2026-11-19 위아래 1% → 2%로 세로만 살짝 줄임).
+   크기: 카드 자리 높이의 110.8% (예전 106.5%보다 전체 약 6% 크게) → 폭 = 높이 × (0.92 × 1748) / (0.96 × 3591).
+   카드 자리(.card-object)의 크기·위치·애니메이션은 그대로이고 그림만 자리보다 위아래로 조금 더 나온다.
+   잘라 내는 양이나 크기를 바꾸면 height를 다시 계산한다. #11의 카드 뒷면(page11)은 따로 정한다.
+   --card-radius: 카드 모서리 둥글기 */
+:root {
+  --card-radius: 12px;
+  /* 카드 그림의 금색: card_back·card_01·card_22의 테두리와 안쪽 장식선 픽셀을 재서 얻은 값(평균 #ad9d81, 색상 38° · 채도 22% · 밝기 59%) */
+  --card-gold: #ad9d81;
+  /* 결과 QR (2026-11-19 수정): 흰 바탕 없이 카드 위에 바로. 모듈 = 카드 금색 그대로,
+     바탕 = 카드 뒷면의 남색(card_back 가운데를 재서 얻은 #033e61)을 QR 자리에만 깔아 가운데의 금색 원 장식이 QR 칸·여백에 섞이지 않게 한다.
+     밝은 모듈 + 어두운 바탕(반전 QR), 대비 약 4.2:1. 반전 QR은 대부분의 휴대전화 카메라가 읽지만 앱에 따라 못 읽을 수 있다 */
+  --card-navy: #033e61;
+  --qr-ink: var(--card-gold);
+  --qr-paper: var(--card-navy);
+}
+.card-object.has-card-art {
+  background: none;
+  box-shadow: none;
+  border-radius: 0;
+}
+.card-art {
+  display: block;
+  height: 110.8%;
+  width: auto;
+  max-width: 100%;
+  flex-shrink: 0;
+  object-fit: contain;
+  object-view-box: inset(2% 4%);
+  border-radius: var(--card-radius);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+  user-select: none;
+  -webkit-user-select: none;
+  pointer-events: none;
 }
 
 /* 위에서 아래로 카드가 내려오는 연출 */
@@ -145,9 +219,9 @@
 
 /* ---------- 상세설명/상세해석 아코디언 ---------- */
 .accordion-btn {
-  min-height: 60px;
-  padding: 0 36px;
-  font-size: 18px;
+  min-height: calc(60px * var(--ui));
+  padding: 0 calc(36px * var(--ui));
+  font-size: calc(18px * var(--ui));
   font-weight: 400;
   background: transparent;
   border: 1px solid var(--color-border);
@@ -163,16 +237,16 @@
   border: 1px solid var(--color-border);
   border-top: none;
   color: var(--color-muted);
-  font-size: 17px;
+  font-size: calc(17px * var(--ui));
 }
 .accordion-panel.open {
   max-height: 320px;
 }
 .accordion-panel .inner {
-  padding: 32px;
+  padding: calc(32px * var(--ui));
 }
 .chevron {
-  font-size: 20px;
+  font-size: calc(20px * var(--ui));
   color: var(--color-muted);
   margin-top: 8px;
 }
@@ -205,9 +279,9 @@
   left: 28px;
   bottom: 40px;
   writing-mode: vertical-rl;
-  font-size: 24px;
+  font-size: calc(24px * var(--ui));
   font-weight: 500;
-  font-family: 'KoPub Batang Medium', 'Malgun Gothic', sans-serif;
+  font-family: 'BonMyeongjo', 'Malgun Gothic', sans-serif;
   color: var(--color-fg);
 }
 
@@ -257,8 +331,8 @@
 .birth-fields {
   display: flex;
   align-items: baseline;
-  gap: 28px;
-  font-size: 22px;
+  gap: calc(28px * var(--ui));
+  font-size: calc(22px * var(--ui));
 }
 .birth-field {
   position: relative;
@@ -267,12 +341,12 @@
 }
 /* 커스텀 드롭다운 (기본 select 목록은 OS가 그려서 스타일 조절이 안 됨) */
 .birth-trigger {
-  width: 110px;
+  width: calc(110px * var(--ui));
   background: transparent;
   border: none;
   border-bottom: 1px solid var(--color-fg);
   color: var(--color-fg);
-  font-size: 22px;
+  font-size: calc(22px * var(--ui));
   font-family: inherit;
   text-align: center;
   padding: 0 18px 6px 4px;
@@ -283,8 +357,8 @@
   position: absolute;
   top: calc(100% + 6px);
   left: 0;
-  width: 110px;
-  max-height: 280px;
+  width: calc(110px * var(--ui));
+  max-height: calc(280px * var(--ui));
   margin: 0;
   padding: 4px 0;
   list-style: none;
@@ -301,8 +375,8 @@
   display: block;
 }
 .birth-list li {
-  padding: 8px 0;
-  font-size: 20px;
+  padding: calc(8px * var(--ui)) 0;
+  font-size: calc(20px * var(--ui));
   text-align: center;
   color: var(--color-muted);
   cursor: pointer;
@@ -357,12 +431,12 @@
   padding-top: 8px;
 }
 .detail-info .name {
-  font-size: 30px;
+  font-size: calc(30px * var(--ui));
   font-weight: 500;
   margin-bottom: 28px;
 }
 .detail-info .row {
-  font-size: 18px;
+  font-size: calc(18px * var(--ui));
   color: var(--color-muted);
   margin-bottom: 14px;
 }
@@ -376,11 +450,11 @@
 }
 .dashboard-cards {
   display: flex;
-  gap: 32px;
+  gap: calc(32px * var(--ui));
 }
 .dashboard-card {
-  width: 260px;
-  height: 340px;
+  width: calc(260px * var(--ui));
+  height: calc(340px * var(--ui));
   background: rgba(0,0,0,0.45);
   border: 1px solid var(--color-border);
   border-radius: 8px;
@@ -388,16 +462,16 @@
   align-items: center;
   justify-content: center;
   color: var(--color-muted);
-  font-size: 16px;
+  font-size: calc(16px * var(--ui));
   text-align: center;
-  padding: 20px;
+  padding: calc(20px * var(--ui));
 }
 .mood-tag {
   margin-top: 20px;
   border: 1px solid var(--color-border);
   border-radius: 6px;
-  padding: 14px 20px;
-  font-size: 16px;
+  padding: calc(14px * var(--ui)) calc(20px * var(--ui));
+  font-size: calc(16px * var(--ui));
   color: var(--color-muted);
 }
 
@@ -406,9 +480,9 @@
   position: absolute;
   top: 40px;
   left: 40px;
-  min-height: 60px;
-  padding: 0 36px;
-  font-size: 18px;
+  min-height: calc(60px * var(--ui));
+  padding: 0 calc(36px * var(--ui));
+  font-size: calc(18px * var(--ui));
   font-weight: 400;
   /* 배경 이미지 위 어디에 놓여도 테두리가 묻히지 않도록 살짝 어둡게 깔아준다 */
   background: rgba(0,0,0,0.4);
@@ -494,7 +568,7 @@
   z-index: 2;
   max-width: 1400px;
   padding: 0 80px;
-  font-family: 'KoPub Batang Medium', 'Malgun Gothic', serif;
+  font-family: 'BonMyeongjo', 'Malgun Gothic', serif;
   font-size: 32px;
   line-height: 1.9;
   text-align: center;
@@ -522,6 +596,47 @@
   transition: opacity 2.5s ease-in-out;
 }
 .phase-desk .room-shade { opacity: 0.62; }
+
+/* ---------- 두루마리 (#9 상세 설명, #14 별 이야기 결과) ----------
+   위아래 막대(.scroll-rod) 사이의 종이(.scroll-paper)가 위쪽에 말린 채(높이 0) 나타났다가 아래로 펼쳐진다.
+   펼쳐질 높이는 각 화면 스크립트가 글 길이(scrollHeight)로 정하고, 시작 시각은 --unroll-delay로 화면마다 정한다.
+   막대: 글 바탕보다 조금 밝은 같은 계열의 단색 + 카드 금색보다 조금 어두운 외곽선 (입체감 그라데이션 없음) */
+:root {
+  --scroll-paper: rgba(0,0,0,0.6);
+  --scroll-rod: #3a2f25;
+  --scroll-rod-line: #8a7b63;
+}
+.scroll { position: relative; }
+.scroll-rod {
+  position: relative;
+  z-index: 1;
+  height: calc(10px * var(--ui));
+  margin: 0 calc(-14px * var(--ui));
+  border-radius: calc(5px * var(--ui));
+  background: var(--scroll-rod);
+  border: 1px solid var(--scroll-rod-line);
+  box-sizing: border-box;
+}
+.scroll-paper {
+  max-height: 0;
+  overflow: hidden;
+  color: #fff;
+  background: var(--scroll-paper);
+  transition: max-height 1.5s cubic-bezier(.33,0,.2,1) var(--unroll-delay, 0s);
+}
+.scroll-paper .inner {
+  line-height: 1.7;
+  word-break: keep-all;               /* 단어 중간('두/루미')에서 줄이 바뀌지 않게 */
+  overflow-wrap: break-word;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.75);
+}
+/* #2·#3: 검은 막(.room-shade, z 1) 위에서 반짝이는 층 */
+.dawn-sparkles {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
 .phase-bright .room-shade { opacity: 0; transition-duration: 2.2s; }
 
 /* 카드가 위로(스크린 속 점술가에게) 올라가는 연출 (.card-drop의 반대) */
